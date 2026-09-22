@@ -1,0 +1,454 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============ TENANCY ============
+
+model Company {
+  id        String   @id @default(uuid())
+  name      String
+  slug      String   @unique
+  isActive  Boolean  @default(true)
+
+  // Company profile
+  address       String?
+  gstin         String?
+  pan           String?
+  phone         String?
+  email         String?
+  website       String?
+  stateCode     String?
+  logoPath      String?
+
+  // Bank details (used on invoices)
+  bankName      String?
+  bankAccount   String?
+  bankIfsc      String?
+
+  // Invoice settings
+  invoicePrefix String?  @default("INV")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users       User[]
+  employees   Employee[]
+  devices     Device[]
+  payrollRuns PayrollRun[]
+  clients     Client[]
+
+  @@map("companies")
+}
+
+model SuperAdmin {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("super_admins")
+}
+
+// ============ USERS & AUTH ============
+
+enum Role {
+  ADMIN
+  HR
+  MANAGER
+  EMPLOYEE
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(EMPLOYEE)
+  isActive     Boolean  @default(true)
+
+  companyId    String
+  company      Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  employee     Employee?
+
+  @@index([companyId])
+  @@map("users")
+}
+
+// ============ EMPLOYEES ============
+
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  INTERN
+}
+
+enum EmployeeCategory {
+  HOUSEKEEPING
+  SEMI_SKILLED
+  SECURITY_GUARD
+  SUPERVISOR
+}
+
+model Employee {
+  id             String           @id @default(uuid())
+  employeeCode   String
+  firstName      String
+  lastName       String
+  email          String
+  phone          String?
+  address        String?
+  fatherName     String?
+  category       EmployeeCategory @default(HOUSEKEEPING)
+  department     String?
+  designation    String?
+  employmentType EmploymentType   @default(FULL_TIME)
+  dateOfJoining  DateTime
+  dateOfLeaving  DateTime?
+  isActive       Boolean          @default(true)
+
+  baseSalary     Decimal?         @db.Decimal(12, 2)
+  currency       String           @default("INR")
+
+  companyId      String
+  company        Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  userId         String?          @unique
+  user           User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  biometrics     Biometric[]
+  faceEmbeddings FaceEmbedding[]
+  attendanceLogs AttendanceLog[]
+  attendanceDays AttendanceDay[]
+
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@unique([companyId, employeeCode])
+  @@unique([companyId, email])
+  @@index([companyId])
+  @@map("employees")
+}
+
+// ============ BIOMETRIC & FACE DATA ============
+
+enum BiometricType {
+  FINGERPRINT
+  FACE
+  CARD
+  PIN
+}
+
+model Biometric {
+  id           String        @id @default(uuid())
+  employeeId   String
+  employee     Employee      @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  type         BiometricType
+  deviceUserId String
+  template     Bytes?
+  deviceId     String?
+  isActive     Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+
+  @@unique([deviceId, deviceUserId])
+  @@index([employeeId])
+  @@map("biometrics")
+}
+
+model FaceEmbedding {
+  id         String   @id @default(uuid())
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  embedding  Float[]
+  label      String?
+  quality    Float?
+  createdAt  DateTime @default(now())
+
+  @@index([employeeId])
+  @@map("face_embeddings")
+}
+
+// ============ ATTENDANCE ============
+
+enum LogDirection {
+  IN
+  OUT
+}
+
+enum LogSource {
+  FACE
+  FINGERPRINT
+  CARD
+  PIN
+  MANUAL
+  MOBILE
+}
+
+model AttendanceLog {
+  id         String       @id @default(uuid())
+  employeeId String
+  employee   Employee     @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  companyId  String
+  timestamp  DateTime     @default(now())
+  direction  LogDirection
+  source     LogSource
+  deviceId   String?
+  confidence Float?
+  scanId     String?      @unique
+  notes      String?
+  createdAt  DateTime     @default(now())
+
+  @@index([employeeId, timestamp])
+  @@index([companyId, timestamp])
+  @@index([timestamp])
+  @@map("attendance_logs")
+}
+
+model AttendanceDay {
+  id           String   @id @default(uuid())
+  employeeId   String
+  employee     Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  companyId    String
+  date         DateTime @db.Date
+  firstIn      DateTime?
+  lastOut      DateTime?
+  totalMinutes Int      @default(0)
+  overtimeMins Int      @default(0)
+  lateMins     Int      @default(0)
+  status       String   @default("PRESENT")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([employeeId, date])
+  @@index([companyId, date])
+  @@index([date])
+  @@map("attendance_days")
+}
+
+// ============ DEVICES ============
+
+model Device {
+  id        String   @id @default(uuid())
+  name      String
+  location  String?
+  type      String   @default("CAMERA")
+  isActive  Boolean  @default(true)
+
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  apiKeys   DeviceApiKey[]
+
+  @@index([companyId])
+  @@map("devices")
+}
+
+model DeviceApiKey {
+  id         String   @id @default(uuid())
+  deviceId   String
+  device     Device   @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  keyHash    String   @unique
+  label      String?
+  lastUsedAt DateTime?
+  expiresAt  DateTime?
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+
+  @@index([deviceId])
+  @@map("device_api_keys")
+}
+
+// ============ PAYROLL ============
+
+model PayrollRun {
+  id             String   @id @default(uuid())
+  periodStart    DateTime @db.Date
+  periodEnd      DateTime @db.Date
+  status         String   @default("DRAFT")
+  totalGross     Decimal  @default(0) @db.Decimal(14, 2)
+  totalNet       Decimal  @default(0) @db.Decimal(14, 2)
+  totalEmployees Int      @default(0)
+
+  companyId      String
+  company        Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  payslips       Payslip[]
+
+  @@unique([companyId, periodStart, periodEnd])
+  @@index([companyId])
+  @@map("payroll_runs")
+}
+
+model Payslip {
+  id              String     @id @default(uuid())
+  payrollRunId    String
+  payrollRun      PayrollRun @relation(fields: [payrollRunId], references: [id], onDelete: Cascade)
+  employeeId      String
+  employeeCode    String
+  employeeName    String
+  email           String
+
+  periodStart     DateTime   @db.Date
+  periodEnd       DateTime   @db.Date
+
+  presentDays     Decimal    @db.Decimal(5, 2)
+  absentDays      Decimal    @db.Decimal(5, 2)
+  halfDays        Decimal    @db.Decimal(5, 2)
+  overtimeMins    Int        @default(0)
+  lateMins        Int        @default(0)
+
+  grossPay        Decimal    @db.Decimal(12, 2)
+  totalDeductions Decimal    @db.Decimal(12, 2)
+  netPay          Decimal    @db.Decimal(12, 2)
+  currency        String     @default("INR")
+
+  emailedAt       DateTime?
+  pdfPath         String?
+
+  lineItems       PayslipLineItem[]
+
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  @@unique([payrollRunId, employeeId])
+  @@index([employeeId])
+  @@map("payslips")
+}
+
+model PayslipLineItem {
+  id        String  @id @default(uuid())
+  payslipId String
+  payslip   Payslip @relation(fields: [payslipId], references: [id], onDelete: Cascade)
+  category  String
+  label     String
+  amount    Decimal @db.Decimal(12, 2)
+  sortOrder Int     @default(0)
+
+  @@index([payslipId])
+  @@map("payslip_line_items")
+}
+
+
+// ============ TALENT BILLING ============
+
+model Client {
+  id          String   @id @default(uuid())
+  name        String
+  gstin       String?
+  address     String
+  email       String?
+  phone       String?
+  stateCode   String?
+
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  rateOverrides ClientCategoryRate[]
+  assignments   EmployeeAssignment[]
+  invoices      TaxInvoice[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([companyId, name])
+  @@index([companyId])
+  @@map("clients")
+}
+
+model ClientCategoryRate {
+  id          String           @id @default(uuid())
+  clientId    String
+  client      Client           @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  category    EmployeeCategory
+  hourlyRate  Decimal          @db.Decimal(10, 2)
+
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@unique([clientId, category])
+  @@map("client_category_rates")
+}
+
+model EmployeeAssignment {
+  id          String    @id @default(uuid())
+  clientId    String
+  client      Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  employeeId  String
+  startDate   DateTime  @db.Date
+  endDate     DateTime? @db.Date
+  isActive    Boolean   @default(true)
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([clientId, employeeId, startDate])
+  @@index([employeeId])
+  @@index([clientId])
+  @@map("employee_assignments")
+}
+
+model TaxInvoice {
+  id             String   @id @default(uuid())
+  invoiceNumber  String
+  clientId       String
+  client         Client   @relation(fields: [clientId], references: [id])
+  companyId      String
+
+  periodStart    DateTime @db.Date
+  periodEnd      DateTime @db.Date
+
+  subtotal       Decimal  @db.Decimal(12, 2)
+  cgstAmount     Decimal  @default(0) @db.Decimal(12, 2)
+  sgstAmount     Decimal  @default(0) @db.Decimal(12, 2)
+  igstAmount     Decimal  @default(0) @db.Decimal(12, 2)
+  totalAmount    Decimal  @db.Decimal(12, 2)
+
+  status         String   @default("DRAFT")
+  issuedAt       DateTime @default(now())
+  dueDate        DateTime?
+  paidAt         DateTime?
+  notes          String?
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  lineItems      TaxInvoiceLineItem[]
+
+  @@unique([companyId, invoiceNumber])
+  @@index([companyId, periodStart])
+  @@index([clientId])
+  @@map("tax_invoices")
+}
+
+model TaxInvoiceLineItem {
+  id            String           @id @default(uuid())
+  invoiceId     String
+  invoice       TaxInvoice       @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  employeeId    String?
+  employeeCode  String
+  employeeName  String
+  category      EmployeeCategory
+  hoursWorked   Decimal          @db.Decimal(8, 2)
+  hourlyRate    Decimal          @db.Decimal(10, 2)
+  amount        Decimal          @db.Decimal(12, 2)
+
+  @@index([invoiceId])
+  @@map("tax_invoice_line_items")
+}

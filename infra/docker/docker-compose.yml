@@ -1,0 +1,57 @@
+﻿services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: attendance-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: attendance_user
+      POSTGRES_PASSWORD: attendance_pass
+      POSTGRES_DB: attendance_db
+    ports:
+      - "55432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U attendance_user -d attendance_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: attendance-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  face-service:
+    build:
+      context: ../../services/face-service
+      dockerfile: Dockerfile
+    container_name: attendance-face
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      BACKEND_URL: http://host.docker.internal:4000
+      BACKEND_DEVICE_KEY: ""
+      MATCH_TOLERANCE: "0.55"
+      LIVENESS_ENABLED: "true"
+    volumes:
+      - face_embeddings:/app/faces
+      - deepface_cache:/root/.deepface
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  postgres_data:
+  redis_data:
+  face_embeddings:
+  deepface_cache:

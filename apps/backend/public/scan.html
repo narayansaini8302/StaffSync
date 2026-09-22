@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Face Scan Attendance</title>
+<style>
+  body { font-family: system-ui, sans-serif; background: #0f172a; color: #e2e8f0; margin: 0; padding: 20px; }
+  h1 { font-size: 20px; margin: 0 0 16px; }
+  .container { max-width: 720px; margin: 0 auto; }
+  .card { background: #1e293b; border-radius: 8px; padding: 20px; margin-bottom: 16px; }
+  label { display: block; font-size: 13px; margin-bottom: 6px; color: #94a3b8; }
+  input, select { width: 100%; padding: 8px 10px; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: #e2e8f0; font-size: 14px; box-sizing: border-box; }
+  input:focus { outline: none; border-color: #3b82f6; }
+  button { background: #22c55e; color: white; border: 0; padding: 10px 16px; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; margin-right: 8px; }
+  button:hover { background: #16a34a; }
+  button:disabled { background: #475569; cursor: not-allowed; }
+  video { width: 100%; border-radius: 8px; transform: scaleX(-1); background: #000; }
+  canvas { display: none; }
+  .log { font-family: monospace; font-size: 12px; background: #0f172a; padding: 10px; border-radius: 6px; max-height: 260px; overflow-y: auto; white-space: pre-wrap; }
+  .ok { color: #22c55e; font-weight: 600; }
+  .err { color: #ef4444; }
+  .info { color: #60a5fa; }
+  .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>?? Face Scan (Attendance)</h1>
+
+  <div class="card">
+    <label>Device Key (X-Device-Key)</label>
+    <input id="deviceKey" placeholder="dk_..." />
+    <br /><br />
+    <div class="row">
+      <button id="start">1. Start Camera</button>
+      <button id="auto" disabled>2. Start Auto-Scan</button>
+      <button id="stop" disabled>3. Stop</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <video id="video" autoplay playsinline muted></video>
+    <canvas id="canvas"></canvas>
+  </div>
+
+  <div class="card">
+    <label>Log</label>
+    <div class="log" id="log">Ready.</div>
+  </div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const log = (msg, cls = '') => {
+  const el = $('log');
+  const t = new Date().toLocaleTimeString();
+  el.innerHTML += `\n[${t}] <span class="${cls}">${msg}</span>`;
+  el.scrollTop = el.scrollHeight;
+};
+
+let stream = null;
+let scanning = false;
+let timer = null;
+
+$('start').onclick = async () => {
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
+    $('video').srcObject = stream;
+    $('auto').disabled = false;
+    log('Camera started', 'ok');
+  } catch (e) {
+    log('Camera error: ' + e.message, 'err');
+  }
+};
+
+async function scanOnce() {
+  const key = $('deviceKey').value.trim();
+  if (!key) {
+    log('Need device key', 'err');
+    return;
+  }
+
+  const video = $('video');
+  if (!video.videoWidth) return;
+
+  const canvas = $('canvas');
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext('2d').drawImage(video, 0, 0);
+
+  const blob = await new Promise((r) => canvas.toBlob(r, 'image/jpeg', 0.85));
+
+  const form = new FormData();
+  form.append('file', blob, 'scan.jpg');
+
+  try {
+    const res = await fetch('/api/face/scan', {
+      method: 'POST',
+      headers: { 'X-Device-Key': key },
+      body: form,
+    });
+    const data = await res.json();
+
+    if (data.matched) {
+      const dir = data.log?.direction || '?';
+      const emp = data.log?.employeeId?.slice(0, 8) || '?';
+      const conf = ((data.confidence || 0) * 100).toFixed(1);
+      log(`? ${dir} · emp=${emp}… · conf=${conf}% · day=${data.day?.totalMinutes ?? 0}m`, 'ok');
+    } else if (data.error) {
+      log('? ' + data.error, 'err');
+    } else if (res.status === 422) {
+      // no face detected, quiet
+    } else {
+      log('No match (distance=' + (data.distance ?? '?') + ')', 'info');
+    }
+  } catch (e) {
+    log('Scan failed: ' + e.message, 'err');
+  }
+}
+
+$('auto').onclick = async () => {
+  if (scanning) return;
+  scanning = true;
+  $('auto').disabled = true;
+  $('stop').disabled = false;
+  log('Auto-scan started', 'info');
+  while (scanning) {
+    await scanOnce();
+    await new Promise((r) => setTimeout(r, 3000));
+  }
+};
+
+$('stop').onclick = () => {
+  scanning = false;
+  clearInterval(timer);
+  $('auto').disabled = false;
+  $('stop').disabled = true;
+  log('Stopped', 'info');
+};
+</script>
+</body>
+</html>

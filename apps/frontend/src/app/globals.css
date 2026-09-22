@@ -1,0 +1,147 @@
+@import "tailwindcss";
+
+/* ==========================================================================
+   Theme tokens
+   Palette:
+     #E3F2FD (light bg / dark fg)
+     #90CAF9 (light accent)
+     #2196F3 (brand)
+     #0D47A1 (dark accent)
+   Dark counterpart:
+     #0A1628 (dark bg)
+     #0F1F35 (dark surface)
+     #1A2B45 (dark border/hover)
+     #2A3F5C (dark strong border)
+   ========================================================================== */
+
+:root {
+  /* Backgrounds */
+  --bg-app:        #F5F9FF;
+  --bg-surface:    #FFFFFF;
+  --bg-elevated:   #E3F2FD;
+  --bg-hover:      #EAF4FE;
+
+  /* Text */
+  --fg-primary:    #0A1B2E;
+  --fg-secondary:  #465B75;
+  --fg-muted:      #7B8FA6;
+
+  /* Borders */
+  --border-subtle: #D6E4F5;
+  --border-strong: #B9CDE5;
+
+  /* Brand */
+  --brand:         #2196F3;
+  --brand-hover:   #1976D2;
+  --brand-soft:    #E3F2FD;
+  --brand-fg:      #FFFFFF;
+
+  /* Semantic */
+  --success:       #16A34A;
+  --success-soft:  #DCFCE7;
+  --danger:        #DC2626;
+  --danger-soft:   #FEE2E2;
+  --warning:       #EA580C;
+  --warning-soft:  #FFEDD5;
+
+  /* Legacy compatibility (used by existing pages) */
+  --background: var(--bg-app);
+  --foreground: var(--fg-primary);
+
+  color-scheme: light;
+}
+
+.dark {
+  /* Backgrounds */
+  --bg-app:        #0A1628;
+  --bg-surface:    #0F1F35;
+  --bg-elevated:   #1A2B45;
+  --bg-hover:      #1A2B45;
+
+  /* Text */
+  --fg-primary:    #E3F2FD;
+  --fg-secondary:  #90CAF9;
+  --fg-muted:      #5B7290;
+
+  /* Borders */
+  --border-subtle: #1A2B45;
+  --border-strong: #2A3F5C;
+
+  /* Brand */
+  --brand:         #2196F3;
+  --brand-hover:   #42A5F5;
+  --brand-soft:    #0D47A1;
+  --brand-fg:      #FFFFFF;
+
+  /* Semantic */
+  --success:       #22C55E;
+  --success-soft:  #052E16;
+  --danger:        #EF4444;
+  --danger-soft:   #450A0A;
+  --warning:       #F97316;
+  --warning-soft:  #431407;
+
+  /* Legacy compatibility */
+  --background: var(--bg-app);
+  --foreground: var(--fg-primary);
+
+  color-scheme: dark;
+}
+
+/* Bridge to Tailwind v4 tokens (matches the original file's @theme) */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --color-app:        var(--bg-app);
+  --color-surface:    var(--bg-surface);
+  --color-elevated:   var(--bg-elevated);
+  --color-hover:      var(--bg-hover);
+
+  --color-fg:         var(--fg-primary);
+  --color-fg-2:       var(--fg-secondary);
+  --color-muted:      var(--fg-muted);
+
+  --color-subtle:     var(--border-subtle);
+  --color-strong:     var(--border-strong);
+
+  --color-brand:      var(--brand);
+  --color-brand-hover:var(--brand-hover);
+  --color-brand-soft: var(--brand-soft);
+  --color-brand-fg:   var(--brand-fg);
+
+  --color-success:    var(--success);
+  --color-success-soft:var(--success-soft);
+  --color-danger:     var(--danger);
+  --color-danger-soft:var(--danger-soft);
+  --color-warning:    var(--warning);
+  --color-warning-soft:var(--warning-soft);
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+/* ==========================================================================
+   Body
+   ========================================================================== */
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+/* ==========================================================================
+   Dark-mode friendly input autofill
+   ========================================================================== */
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill,
+select:-webkit-autofill {
+  -webkit-text-fill-color: var(--fg-primary);
+  -webkit-box-shadow: 0 0 0 30px var(--bg-surface) inset;
+  transition: background-color 5000s ease-in-out 0s;
+}

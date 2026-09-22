@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<style>
+  body {
+    font-family: "Georgia", "Times New Roman", serif;
+    color: #1a1a1a;
+    font-size: 13px;
+    line-height: 1.7;
+    margin: 0;
+    padding: 50px 60px;
+  }
+  .top-line {
+    border-top: 3px solid #2F5D62;
+    margin-bottom: 40px;
+  }
+  h1 {
+    text-align: center;
+    font-size: 24px;
+    font-weight: bold;
+    letter-spacing: 2px;
+    margin: 0 0 50px 0;
+  }
+  .date-line {
+    text-align: right;
+    margin-bottom: 30px;
+    font-size: 12px;
+  }
+  p {
+    margin: 0 0 16px 0;
+    text-align: justify;
+  }
+  .recipient {
+    margin-bottom: 30px;
+  }
+  .recipient .name {
+    font-weight: bold;
+  }
+  .signature {
+    margin-top: 60px;
+  }
+  .signature .name {
+    font-weight: bold;
+  }
+  .company-name {
+    font-weight: bold;
+    color: #2F5D62;
+  }
+  .details-box {
+    background: #f6f8f8;
+    border-left: 3px solid #2F5D62;
+    padding: 14px 18px;
+    margin: 24px 0;
+    font-size: 12px;
+  }
+  .details-box .row {
+    display: flex;
+    margin-bottom: 4px;
+  }
+  .details-box .row .label {
+    width: 140px;
+    color: #555;
+  }
+  .details-box .row .value {
+    font-weight: 600;
+  }
+</style>
+</head>
+<body>
+
+<div class="top-line"></div>
+
+<h1>JOINING LETTER</h1>
+
+<div class="date-line">
+  Date: {{letterDate}}
+</div>
+
+<div class="recipient">
+  <div>To,</div>
+  <div>The HR Manager,</div>
+  <div class="company-name">{{companyName}}</div>
+  <div>{{companyAddress}}</div>
+</div>
+
+<p>Dear <span class="name">{{employeeName}}</span>,</p>
+
+<p>
+  This is to formally confirm that you have joined <span class="company-name">{{companyName}}</span>
+  on <strong>{{dateOfJoining}}</strong> as a <strong>{{designation}}</strong>
+  in the <strong>{{department}}</strong> department.
+</p>
+
+<div class="details-box">
+  <div class="row"><div class="label">Employee Code:</div><div class="value">{{employeeCode}}</div></div>
+  <div class="row"><div class="label">Full Name:</div><div class="value">{{employeeName}}</div></div>
+  <div class="row"><div class="label">Father's Name:</div><div class="value">{{fatherName}}</div></div>
+  <div class="row"><div class="label">Category:</div><div class="value">{{category}}</div></div>
+  <div class="row"><div class="label">Department:</div><div class="value">{{department}}</div></div>
+  <div class="row"><div class="label">Designation:</div><div class="value">{{designation}}</div></div>
+  <div class="row"><div class="label">Employment Type:</div><div class="value">{{employmentType}}</div></div>
+  <div class="row"><div class="label">Date of Joining:</div><div class="value">{{dateOfJoining}}</div></div>
+</div>
+
+<p>
+  We welcome you to our team and look forward to a long and mutually beneficial
+  association. Please feel free to reach out to the HR department for any
+  assistance you may need during your onboarding.
+</p>
+
+<p>
+  We wish you all the very best in your new role.
+</p>
+
+<div class="signature">
+  <p>Warm regards,</p>
+  <div class="name">{{companyName}}</div>
+  <div>Authorised Signatory</div>
+</div>
+
+</body>
+</html>
