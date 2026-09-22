@@ -65,7 +65,7 @@ clientRouter.patch('/:id', requireRole('ADMIN', 'HR'), async (req, res) => {
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
 
   try {
-    const client = await updateClient(req.user!.companyId, req.params.id, parsed.data);
+    const client = await updateClient(req.user!.companyId, req.params.id as string, parsed.data);
     res.json(client);
   } catch (e: any) {
     if (e.message === 'CLIENT_NOT_FOUND')
@@ -77,7 +77,7 @@ clientRouter.patch('/:id', requireRole('ADMIN', 'HR'), async (req, res) => {
 // DELETE
 clientRouter.delete('/:id', requireRole('ADMIN'), async (req, res) => {
   try {
-    await deleteClient(req.user!.companyId, req.params.id);
+    await deleteClient(req.user!.companyId, req.params.id as string);
     res.json({ ok: true });
   } catch (e: any) {
     if (e.message === 'CLIENT_NOT_FOUND')
@@ -92,7 +92,7 @@ clientRouter.post('/:id/rates', requireRole('ADMIN', 'HR'), async (req, res) => 
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
 
   try {
-    const rate = await setClientRate(req.user!.companyId, req.params.id, parsed.data);
+    const rate = await setClientRate(req.user!.companyId, req.params.id as string, parsed.data);
     res.json(rate);
   } catch (e: any) {
     if (e.message === 'CLIENT_NOT_FOUND')
@@ -104,7 +104,7 @@ clientRouter.post('/:id/rates', requireRole('ADMIN', 'HR'), async (req, res) => 
 clientRouter.delete('/:id/rates/:category', requireRole('ADMIN', 'HR'), async (req, res) => {
   try {
     const category = req.params.category as any;
-    await removeClientRate(req.user!.companyId, req.params.id, category);
+    await removeClientRate(req.user!.companyId, req.params.id as string, category);
     res.json({ ok: true });
   } catch (e: any) {
     if (e.message === 'CLIENT_NOT_FOUND')

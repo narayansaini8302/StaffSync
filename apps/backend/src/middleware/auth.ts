@@ -1,14 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { verifyAccessToken, verifySuperAdminToken, TokenPayload, SuperAdminTokenPayload } from '../utils/jwt';
 
-declare global {
-  namespace Express {
-    interface Request {
-      user?: TokenPayload;
-      superAdmin?: SuperAdminTokenPayload;
-    }
-  }
-}
 
 export function requireAuth(req: Request, res: Response, next: NextFunction) {
   const header = req.headers.authorization;

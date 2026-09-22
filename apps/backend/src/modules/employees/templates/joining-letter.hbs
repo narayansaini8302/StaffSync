@@ -3,42 +3,61 @@
 <head>
 <meta charset="utf-8" />
 <style>
+  @page {
+    size: A4 portrait;
+    margin: 15mm 18mm;
+  }
+  * {
+    box-sizing: border-box;
+  }
+  html, body {
+    margin: 0;
+    padding: 0;
+  }
   body {
     font-family: "Georgia", "Times New Roman", serif;
     color: #1a1a1a;
-    font-size: 13px;
-    line-height: 1.7;
-    margin: 0;
-    padding: 50px 60px;
+    font-size: 12.5px;
+    line-height: 1.55;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
   .top-line {
     border-top: 3px solid #2F5D62;
-    margin-bottom: 40px;
+    margin-bottom: 24px;
   }
   h1 {
     text-align: center;
-    font-size: 24px;
+    font-size: 20px;
     font-weight: bold;
     letter-spacing: 2px;
-    margin: 0 0 50px 0;
+    margin: 0 0 24px 0;
+    color: #1a1a1a;
   }
   .date-line {
     text-align: right;
-    margin-bottom: 30px;
+    margin-bottom: 18px;
     font-size: 12px;
+    color: #444;
   }
   p {
-    margin: 0 0 16px 0;
+    margin: 0 0 12px 0;
     text-align: justify;
   }
   .recipient {
-    margin-bottom: 30px;
+    margin-bottom: 20px;
+    line-height: 1.45;
   }
   .recipient .name {
     font-weight: bold;
   }
   .signature {
-    margin-top: 60px;
+    margin-top: 36px;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .signature p {
+    margin-bottom: 4px;
   }
   .signature .name {
     font-weight: bold;
@@ -50,13 +69,18 @@
   .details-box {
     background: #f6f8f8;
     border-left: 3px solid #2F5D62;
-    padding: 14px 18px;
-    margin: 24px 0;
+    padding: 12px 18px;
+    margin: 16px 0;
     font-size: 12px;
+    break-inside: avoid;
+    page-break-inside: avoid;
   }
   .details-box .row {
     display: flex;
     margin-bottom: 4px;
+  }
+  .details-box .row:last-child {
+    margin-bottom: 0;
   }
   .details-box .row .label {
     width: 140px;

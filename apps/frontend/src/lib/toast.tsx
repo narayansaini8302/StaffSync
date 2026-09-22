@@ -1,7 +1,6 @@
-﻿'use client';
+'use client';
 
 import { create } from 'zustand';
-import { useEffect } from 'react';
 import { X, CheckCircle2, AlertCircle, Info } from 'lucide-react';
 
 export type ToastKind = 'success' | 'error' | 'info';

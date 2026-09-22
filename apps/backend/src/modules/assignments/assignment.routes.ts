@@ -57,7 +57,7 @@ assignmentRouter.patch('/:id', requireRole('ADMIN', 'HR'), async (req, res) => {
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
 
   try {
-    const a = await updateAssignment(req.user!.companyId, req.params.id, parsed.data);
+    const a = await updateAssignment(req.user!.companyId, req.params.id as string, parsed.data);
     res.json(a);
   } catch (e: any) {
     if (e.message === 'ASSIGNMENT_NOT_FOUND')
@@ -69,7 +69,7 @@ assignmentRouter.patch('/:id', requireRole('ADMIN', 'HR'), async (req, res) => {
 // DELETE
 assignmentRouter.delete('/:id', requireRole('ADMIN', 'HR'), async (req, res) => {
   try {
-    await deleteAssignment(req.user!.companyId, req.params.id);
+    await deleteAssignment(req.user!.companyId, req.params.id as string);
     res.json({ ok: true });
   } catch (e: any) {
     if (e.message === 'ASSIGNMENT_NOT_FOUND')

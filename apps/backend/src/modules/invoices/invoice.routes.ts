@@ -103,7 +103,7 @@ invoiceRouter.patch('/:id/status', requireRole('ADMIN', 'HR'), async (req, res) 
   try {
     const inv = await updateInvoiceStatus(
       req.user!.companyId,
-      req.params.id,
+      req.params.id as string,
       parsed.data.status,
     );
     res.json(inv);
@@ -117,7 +117,7 @@ invoiceRouter.patch('/:id/status', requireRole('ADMIN', 'HR'), async (req, res) 
 // DELETE
 invoiceRouter.delete('/:id', requireRole('ADMIN'), async (req, res) => {
   try {
-    await deleteInvoice(req.user!.companyId, req.params.id);
+    await deleteInvoice(req.user!.companyId, req.params.id as string);
     res.json({ ok: true });
   } catch (e: any) {
     if (e.message === 'INVOICE_NOT_FOUND')

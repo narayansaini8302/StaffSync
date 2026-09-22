@@ -93,7 +93,7 @@ employeeRouter.patch('/:id', requireRole('ADMIN', 'HR'), async (req, res) => {
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
 
   try {
-    const emp = await updateEmployee(req.user!.companyId, req.params.id, parsed.data);
+    const emp = await updateEmployee(req.user!.companyId, req.params.id as string, parsed.data);
     res.json(emp);
   } catch (e: any) {
     if (e.message === 'EMPLOYEE_NOT_FOUND')
@@ -133,7 +133,7 @@ employeeRouter.get('/:id/joining-letter/pdf', async (req, res) => {
 // SOFT DELETE — admin / HR only
 employeeRouter.delete('/:id', requireRole('ADMIN', 'HR'), async (req, res) => {
   try {
-    const emp = await deactivateEmployee(req.user!.companyId, req.params.id);
+    const emp = await deactivateEmployee(req.user!.companyId, req.params.id as string);
     res.json({ id: emp.id, isActive: emp.isActive, dateOfLeaving: emp.dateOfLeaving });
   } catch (e: any) {
     if (e.message === 'EMPLOYEE_NOT_FOUND')
