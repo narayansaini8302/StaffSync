@@ -143,7 +143,7 @@ attendanceRouter.delete(
   requireRole('ADMIN'),
   async (req, res) => {
     try {
-      const result = await deleteLog(req.user!.companyId, req.params.id as string);
+      const result = await deleteLog(req.user!.companyId, String(req.params.id) as string);
       res.json(result);
     } catch (e: any) {
       if (e.message === 'LOG_NOT_FOUND')
@@ -167,7 +167,7 @@ attendanceRouter.patch(
       return res.status(400).json({ error: 'direction must be IN or OUT' });
     }
     try {
-      const result = await editLog(req.user!.companyId, req.params.id as string, {
+      const result = await editLog(req.user!.companyId, String(req.params.id) as string, {
         timestamp,
         direction,
       });

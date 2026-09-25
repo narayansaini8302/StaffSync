@@ -1,4 +1,4 @@
-﻿import nodemailer, { Transporter } from 'nodemailer';
+import nodemailer, { Transporter } from 'nodemailer';
 
 let transporter: Transporter | null = null;
 let etherealUser: string | null = null;

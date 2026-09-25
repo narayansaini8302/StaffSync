@@ -56,18 +56,18 @@ invoiceRouter.get('/', async (req, res) => {
 
 // GET ONE
 invoiceRouter.get('/:id', async (req, res) => {
-  const invoice = await getInvoiceById(req.user!.companyId, req.params.id);
+  const invoice = await getInvoiceById(req.user!.companyId, String(req.params.id));
   if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
   res.json(invoice);
 });
 // GET PDF
 invoiceRouter.get('/:id/pdf', async (req, res) => {
   try {
-    const pdf = await generateInvoicePdf(req.user!.companyId, req.params.id);
+    const pdf = await generateInvoicePdf(req.user!.companyId, String(req.params.id));
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader(
       'Content-Disposition',
-      'attachment; filename="invoice-' + req.params.id + '.pdf"',
+      'attachment; filename="invoice-' + String(req.params.id) + '.pdf"',
     );
     res.send(pdf);
   } catch (e: any) {
@@ -80,11 +80,11 @@ invoiceRouter.get('/:id/pdf', async (req, res) => {
 // GET ANNEXURE PDF (employee-wise detail)
 invoiceRouter.get('/:id/annexure/pdf', async (req, res) => {
   try {
-    const pdf = await generateInvoiceAnnexurePdf(req.user!.companyId, req.params.id);
+    const pdf = await generateInvoiceAnnexurePdf(req.user!.companyId, String(req.params.id));
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader(
       'Content-Disposition',
-      'attachment; filename="annexure-' + req.params.id + '.pdf"',
+      'attachment; filename="annexure-' + String(req.params.id) + '.pdf"',
     );
     res.send(pdf);
   } catch (e: any) {
@@ -103,7 +103,7 @@ invoiceRouter.patch('/:id/status', requireRole('ADMIN', 'HR'), async (req, res) 
   try {
     const inv = await updateInvoiceStatus(
       req.user!.companyId,
-      req.params.id as string,
+      String(String(req.params.id)) as string,
       parsed.data.status,
     );
     res.json(inv);
@@ -117,7 +117,7 @@ invoiceRouter.patch('/:id/status', requireRole('ADMIN', 'HR'), async (req, res) 
 // DELETE
 invoiceRouter.delete('/:id', requireRole('ADMIN'), async (req, res) => {
   try {
-    await deleteInvoice(req.user!.companyId, req.params.id as string);
+    await deleteInvoice(req.user!.companyId, String(req.params.id) as string);
     res.json({ ok: true });
   } catch (e: any) {
     if (e.message === 'INVOICE_NOT_FOUND')

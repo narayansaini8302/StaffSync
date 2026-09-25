@@ -82,7 +82,7 @@ employeeRouter.get('/', async (req, res) => {
 
 // GET ONE
 employeeRouter.get('/:id', async (req, res) => {
-  const emp = await getEmployeeById(req.user!.companyId, req.params.id);
+  const emp = await getEmployeeById(req.user!.companyId, String(req.params.id));
   if (!emp) return res.status(404).json({ error: 'Employee not found' });
   res.json(emp);
 });
@@ -93,7 +93,7 @@ employeeRouter.patch('/:id', requireRole('ADMIN', 'HR'), async (req, res) => {
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
 
   try {
-    const emp = await updateEmployee(req.user!.companyId, req.params.id as string, parsed.data);
+    const emp = await updateEmployee(req.user!.companyId, String(req.params.id) as string, parsed.data);
     res.json(emp);
   } catch (e: any) {
     if (e.message === 'EMPLOYEE_NOT_FOUND')
@@ -114,11 +114,11 @@ employeeRouter.patch('/:id', requireRole('ADMIN', 'HR'), async (req, res) => {
 // GET JOINING LETTER PDF
 employeeRouter.get('/:id/joining-letter/pdf', async (req, res) => {
   try {
-    const pdf = await generateJoiningLetterPdf(req.user!.companyId, req.params.id);
+    const pdf = await generateJoiningLetterPdf(req.user!.companyId, String(req.params.id));
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader(
       'Content-Disposition',
-      'attachment; filename="joining-letter-' + req.params.id + '.pdf"',
+      'attachment; filename="joining-letter-' + String(req.params.id) + '.pdf"',
     );
     res.send(pdf);
   } catch (e: any) {
@@ -133,7 +133,7 @@ employeeRouter.get('/:id/joining-letter/pdf', async (req, res) => {
 // SOFT DELETE — admin / HR only
 employeeRouter.delete('/:id', requireRole('ADMIN', 'HR'), async (req, res) => {
   try {
-    const emp = await deactivateEmployee(req.user!.companyId, req.params.id as string);
+    const emp = await deactivateEmployee(req.user!.companyId, String(req.params.id) as string);
     res.json({ id: emp.id, isActive: emp.isActive, dateOfLeaving: emp.dateOfLeaving });
   } catch (e: any) {
     if (e.message === 'EMPLOYEE_NOT_FOUND')

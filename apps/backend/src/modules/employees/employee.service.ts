@@ -235,7 +235,7 @@ export async function generateJoiningLetterPdf(companyId: string, employeeId: st
       year: 'numeric',
     }),
 
-        companyName: company.name,
+    companyName: company.name,
     companyAddress: company.address,
   };
   const html = compiledJoiningTemplate(data);

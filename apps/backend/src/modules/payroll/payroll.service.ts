@@ -242,7 +242,7 @@ export async function processPayrollRun(
     );
     if (!slip) continue;
 
-       // Fetch company info once (cache it for the loop)
+    // Fetch company info once (cache it for the loop)
     if (!companyInfo) {
       const { getCompanyForPdf } = await import('../company/company.service');
       companyInfo = await getCompanyForPdf(companyId);
@@ -449,7 +449,7 @@ export async function regeneratePayslipPdf(
     deductions,
   };
 
-    const { getCompanyForPdf } = await import('../company/company.service');
+  const { getCompanyForPdf } = await import('../company/company.service');
   const company = await getCompanyForPdf(companyId);
 
   return renderPayslipPdf({

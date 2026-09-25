@@ -54,7 +54,7 @@ clientRouter.get('/', async (req, res) => {
 
 // GET ONE
 clientRouter.get('/:id', async (req, res) => {
-  const client = await getClientById(req.user!.companyId, req.params.id);
+  const client = await getClientById(req.user!.companyId, String(req.params.id) as string);
   if (!client) return res.status(404).json({ error: 'Client not found' });
   res.json(client);
 });
@@ -65,7 +65,7 @@ clientRouter.patch('/:id', requireRole('ADMIN', 'HR'), async (req, res) => {
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
 
   try {
-    const client = await updateClient(req.user!.companyId, req.params.id as string, parsed.data);
+    const client = await updateClient(req.user!.companyId, String(req.params.id) as string, parsed.data);
     res.json(client);
   } catch (e: any) {
     if (e.message === 'CLIENT_NOT_FOUND')
@@ -77,7 +77,7 @@ clientRouter.patch('/:id', requireRole('ADMIN', 'HR'), async (req, res) => {
 // DELETE
 clientRouter.delete('/:id', requireRole('ADMIN'), async (req, res) => {
   try {
-    await deleteClient(req.user!.companyId, req.params.id as string);
+    await deleteClient(req.user!.companyId, String(req.params.id) as string);
     res.json({ ok: true });
   } catch (e: any) {
     if (e.message === 'CLIENT_NOT_FOUND')

@@ -49,7 +49,7 @@ payrollRouter.get('/runs', async (req, res) => {
 });
 
 payrollRouter.get('/runs/:id', async (req, res) => {
-  const run = await getPayrollRunWithPayslips(req.user!.companyId, req.params.id);
+  const run = await getPayrollRunWithPayslips(req.user!.companyId, String(req.params.id));
   if (!run) return res.status(404).json({ error: 'Run not found' });
   res.json(run);
 });
@@ -59,7 +59,7 @@ payrollRouter.get('/runs/:id', async (req, res) => {
 // ---------------------------------------------------------------------------
 
 payrollRouter.get('/payslips/:id', async (req, res) => {
-  const slip = await getPayslipWithItems(req.user!.companyId, req.params.id);
+  const slip = await getPayslipWithItems(req.user!.companyId, String(req.params.id));
   if (!slip) return res.status(404).json({ error: 'Payslip not found' });
   res.json(slip);
 });
@@ -68,13 +68,13 @@ payrollRouter.get('/payslips/:id/pdf', async (req, res) => {
   try {
     const pdf = await regeneratePayslipPdf(
       req.user!.companyId,
-      req.params.id,
+      String(req.params.id),
       req.query.companyName as string | undefined,
     );
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader(
       'Content-Disposition',
-      'attachment; filename="payslip-' + req.params.id + '.pdf"',
+      'attachment; filename="payslip-' + String(req.params.id) + '.pdf"',
     );
     res.send(pdf);
   } catch (e: any) {

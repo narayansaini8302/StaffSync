@@ -392,7 +392,7 @@ export async function generateInvoicePdf(companyId: string, invoiceId: string) {
     periodEnd: invoice.periodEnd.toISOString().slice(0, 10),
     notes: invoice.notes,
 
-      companyName: company.name,
+    companyName: company.name,
     companyGstin: company.gstin,
     companyAddress: company.address,
     companyState: company.stateCode ?? companyState,
@@ -418,7 +418,7 @@ export async function generateInvoicePdf(companyId: string, invoiceId: string) {
     totalAmount: fmt(totalAmount),
     amountInWords: numberToWordsIndian(totalAmount),
 
-        bankName: company.bankName ?? 'HDFC Bank',
+    bankName: company.bankName ?? 'HDFC Bank',
     bankAccount: company.bankAccount ?? '1234567890',
     bankIfsc: company.bankIfsc ?? 'HDFC0001234',
   };
@@ -499,7 +499,7 @@ export async function generateInvoiceAnnexurePdf(companyId: string, invoiceId: s
     periodEnd: invoice.periodEnd.toISOString().slice(0, 10),
     generatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
 
-      companyName: company.name,
+    companyName: company.name,
     clientName: invoice.client.name,
 
     totalEmployees: invoice.lineItems.length,
