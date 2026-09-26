@@ -46,11 +46,13 @@ const createSchema = z.object({
   baseSalary: z.number().nonnegative().optional(),
   currency: z.string().length(3).optional(),
   userId: z.string().uuid().optional(),
+  clientId: z.string().uuid().nullable().optional(),
 });
 
 const updateSchema = createSchema.partial().extend({
   isActive: z.boolean().optional(),
   dateOfLeaving: z.string().nullable().optional(),
+  clientId: z.string().uuid().nullable().optional(),
 });
 
 const listSchema = z.object({

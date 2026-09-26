@@ -46,6 +46,11 @@ attendanceRouter.post(
     } catch (e: any) {
       if (e.message === 'EMPLOYEE_NOT_FOUND')
         return res.status(404).json({ error: 'Employee not found' });
+      if (e.message === 'EMPLOYEE_NOT_ASSIGNED_TO_CLIENT')
+        return res.status(400).json({
+          error: 'EMPLOYEE_NOT_ASSIGNED_TO_CLIENT',
+          message: 'Please assign this employee to a client before marking attendance.',
+        });
       if (e?.code === 'P2002')
         return res.status(200).json({ error: 'Duplicate scanId', duplicate: true });
       if (e?.code === 'P2003')
@@ -146,6 +151,12 @@ attendanceRouter.post(
     } catch (e: any) {
       if (e.message === 'EMPLOYEE_NOT_FOUND') {
         return res.status(404).json({ error: 'Employee not found' });
+      }
+      if (e.message === 'EMPLOYEE_NOT_ASSIGNED_TO_CLIENT') {
+        return res.status(400).json({
+          error: 'EMPLOYEE_NOT_ASSIGNED_TO_CLIENT',
+          message: 'Please assign this employee to a client before marking attendance.',
+        });
       }
       console.error('markManualAttendance error:', e);
       res.status(500).json({ error: 'Failed to mark attendance', detail: e.message });

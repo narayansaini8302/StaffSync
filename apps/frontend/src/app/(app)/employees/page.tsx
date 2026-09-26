@@ -12,9 +12,10 @@ import {
   Download,
   Mail,
   Send,
+  Briefcase,
 } from 'lucide-react';
 import { api } from '@/lib/api';
-import { Employee, Paginated, CreateEmployeeInput } from '@/lib/types';
+import { Employee, Paginated, CreateEmployeeInput, Client } from '@/lib/types';
 import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/lib/toast';
@@ -203,7 +204,18 @@ export default function EmployeesPage() {
                   {emp.employeeCode}
                 </td>
                 <td className="px-4 py-3 text-fg">
-                  {emp.firstName} {emp.lastName}
+                  <div className="font-medium text-fg">
+                    {emp.firstName} {emp.lastName}
+                  </div>
+                  {emp.assignedClient ? (
+                    <div className="text-[11px] text-brand font-medium flex items-center gap-1 mt-0.5">
+                      <Briefcase size={11} /> {emp.assignedClient.name}
+                    </div>
+                  ) : (
+                    <div className="text-[10px] text-amber-500 font-semibold mt-0.5">
+                      ⚠️ Not assigned to client
+                    </div>
+                  )}
                   {emp.fatherName && (
                     <div className="text-[10px] text-muted">
                       s/o {emp.fatherName}
@@ -364,6 +376,11 @@ function EmployeeFormModal({
   onSaved: () => void;
 }) {
   const isEdit = !!employee;
+  const clientsQuery = useQuery({
+    queryKey: ['clients'],
+    queryFn: () => api.get<{ data: Client[] }>('/api/clients'),
+  });
+
   const [form, setForm] = useState<CreateEmployeeInput & { employeeCode: string }>({
     employeeCode: '',
     firstName: '',
@@ -379,6 +396,7 @@ function EmployeeFormModal({
     dateOfJoining: new Date().toISOString().slice(0, 10),
     baseSalary: categoryDefaults.HOUSEKEEPING,
     currency: 'INR',
+    clientId: '',
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -405,6 +423,7 @@ function EmployeeFormModal({
           dateOfJoining: emp.dateOfJoining.slice(0, 10),
           baseSalary: emp.baseSalary ? Number(emp.baseSalary) : undefined,
           currency: emp.currency ?? 'INR',
+          clientId: emp.assignedClient?.id ?? '',
         });
       } else {
         setForm({
@@ -422,6 +441,7 @@ function EmployeeFormModal({
           dateOfJoining: new Date().toISOString().slice(0, 10),
           baseSalary: categoryDefaults.HOUSEKEEPING,
           currency: 'INR',
+          clientId: '',
         });
       }
     }
@@ -603,6 +623,28 @@ function EmployeeFormModal({
             value={form.currency ?? 'INR'}
             onChange={(v) => setForm({ ...form, currency: v })}
           />
+        </div>
+
+        {/* Row 9: Client Assignment */}
+        <div>
+          <label className="block text-xs text-fg-2 mb-1">
+            Assigned Client <span className="text-muted">(Required to mark attendance)</span>
+          </label>
+          <select
+            value={form.clientId ?? ''}
+            onChange={(e) => setForm({ ...form, clientId: e.target.value || null })}
+            className="w-full px-3 py-2 rounded-lg bg-app border border-subtle text-fg text-sm focus:outline-none focus:border-brand"
+          >
+            <option value="">-- No Client Assigned (Unassigned) --</option>
+            {(clientsQuery.data?.data ?? []).map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name} {c.gstin ? `(${c.gstin})` : ''}
+              </option>
+            ))}
+          </select>
+          <p className="text-[11px] text-muted mt-1">
+            Employees must be assigned to an active client contract before attendance can be marked.
+          </p>
         </div>
 
         {error && (

@@ -28,6 +28,7 @@ export interface Employee {
   baseSalary?: string | number | null;
   currency: string;
   userId?: string | null;
+  assignedClient?: { id: string; name: string } | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -57,6 +58,7 @@ export interface CreateEmployeeInput {
   dateOfJoining: string;
   baseSalary?: number;
   currency?: string;
+  clientId?: string | null;
 }
 
 export type UpdateEmployeeInput = Partial<CreateEmployeeInput> & {
@@ -109,6 +111,11 @@ export interface DailySheetEmployee {
   email: string | null;
   category: string;
   employmentType: string;
+  assignedClient?: {
+    id: string;
+    name: string;
+  } | null;
+  isAssigned?: boolean;
   attendance: {
     id: string;
     status: 'PRESENT' | 'HALF_DAY' | 'ABSENT' | 'LEAVE' | string;
@@ -124,6 +131,8 @@ export interface DailySheetResponse {
   date: string;
   stats: {
     totalEmployees: number;
+    assignedCount?: number;
+    unassignedCount?: number;
     markedCount: number;
     unmarkedCount: number;
     presentCount: number; // Full day (8h)

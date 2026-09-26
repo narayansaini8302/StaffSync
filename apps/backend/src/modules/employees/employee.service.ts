@@ -30,11 +30,13 @@ export interface CreateEmployeeInput {
   baseSalary?: number;
   currency?: string;
   userId?: string;
+  clientId?: string | null;
 }
 
 export interface UpdateEmployeeInput extends Partial<CreateEmployeeInput> {
   isActive?: boolean;
   dateOfLeaving?: string | null;
+  clientId?: string | null;
 }
 
 export interface ListEmployeesQuery {
@@ -52,7 +54,7 @@ export async function createEmployee(companyId: string, input: CreateEmployeeInp
   });
   if (existing) throw new Error('EMPLOYEE_CODE_TAKEN');
 
-  return prisma.employee.create({
+  const employee = await prisma.employee.create({
     data: {
       employeeCode: input.employeeCode,
       firstName: input.firstName,
@@ -72,6 +74,24 @@ export async function createEmployee(companyId: string, input: CreateEmployeeInp
       companyId,
     },
   });
+
+  if (input.clientId) {
+    const client = await prisma.client.findFirst({
+      where: { id: input.clientId, companyId },
+    });
+    if (client) {
+      await prisma.employeeAssignment.create({
+        data: {
+          clientId: input.clientId,
+          employeeId: employee.id,
+          startDate: new Date(input.dateOfJoining),
+          isActive: true,
+        },
+      });
+    }
+  }
+
+  return employee;
 }
 
 export async function listEmployees(companyId: string, query: ListEmployeesQuery) {
@@ -109,7 +129,31 @@ export async function listEmployees(companyId: string, query: ListEmployeesQuery
     prisma.employee.count({ where }),
   ]);
 
-  return buildPaginated(data, total, page, pageSize);
+  const employeeIds = data.map((e) => e.id);
+  const assignments = await prisma.employeeAssignment.findMany({
+    where: {
+      employeeId: { in: employeeIds },
+      client: { companyId },
+      isActive: true,
+    },
+    include: {
+      client: { select: { id: true, name: true } },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+  const assignMap = new Map<string, { id: string; name: string }>();
+  for (const a of assignments) {
+    if (!assignMap.has(a.employeeId)) {
+      assignMap.set(a.employeeId, { id: a.client.id, name: a.client.name });
+    }
+  }
+
+  const enrichedData = data.map((e) => ({
+    ...e,
+    assignedClient: assignMap.get(e.id) || null,
+  }));
+
+  return buildPaginated(enrichedData, total, page, pageSize);
 }
 
 export async function getEmployeeById(companyId: string, id: string) {
@@ -171,7 +215,36 @@ export async function updateEmployee(
       ? { connect: { id: input.userId } }
       : { disconnect: true };
 
-  return prisma.employee.update({ where: { id }, data });
+  const updatedEmployee = await prisma.employee.update({ where: { id }, data });
+
+  if (input.clientId !== undefined) {
+    if (input.clientId) {
+      const client = await prisma.client.findFirst({
+        where: { id: input.clientId, companyId },
+      });
+      if (client) {
+        await prisma.employeeAssignment.updateMany({
+          where: { employeeId: id, isActive: true },
+          data: { isActive: false, endDate: new Date() },
+        });
+        await prisma.employeeAssignment.create({
+          data: {
+            clientId: input.clientId,
+            employeeId: id,
+            startDate: new Date(),
+            isActive: true,
+          },
+        });
+      }
+    } else {
+      await prisma.employeeAssignment.updateMany({
+        where: { employeeId: id, isActive: true },
+        data: { isActive: false, endDate: new Date() },
+      });
+    }
+  }
+
+  return updatedEmployee;
 }
 
 export async function deactivateEmployee(companyId: string, id: string) {

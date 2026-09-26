@@ -42,6 +42,18 @@ export async function recordScan(companyId: string, input: RecordScanInput) {
   });
   if (!employee) throw new Error('EMPLOYEE_NOT_FOUND');
 
+  // Verify the employee is assigned to an active client
+  const assignment = await prisma.employeeAssignment.findFirst({
+    where: {
+      employeeId: input.employeeId,
+      isActive: true,
+      client: { companyId },
+    },
+  });
+  if (!assignment) {
+    throw new Error('EMPLOYEE_NOT_ASSIGNED_TO_CLIENT');
+  }
+
   if (input.scanId) {
     const existing = await prisma.attendanceLog.findUnique({
       where: { scanId: input.scanId },
@@ -304,6 +316,18 @@ export async function markManualAttendance(
   });
   if (!employee) throw new Error('EMPLOYEE_NOT_FOUND');
 
+  // Verify the employee is assigned to an active client
+  const assignment = await prisma.employeeAssignment.findFirst({
+    where: {
+      employeeId: input.employeeId,
+      isActive: true,
+      client: { companyId },
+    },
+  });
+  if (!assignment) {
+    throw new Error('EMPLOYEE_NOT_ASSIGNED_TO_CLIENT');
+  }
+
   const dayDate = parseDateOnly(input.date);
 
   // Standard: Full Day = 8 hours (480 mins), Half Day = 4 hours (240 mins), Absent/Leave = 0 mins
@@ -408,8 +432,23 @@ export async function markAllActiveEmployees(
     notes?: string;
   },
 ) {
+  // Only select employees who have an active client assignment
+  const activeAssignments = await prisma.employeeAssignment.findMany({
+    where: {
+      isActive: true,
+      client: { companyId },
+    },
+    select: { employeeId: true },
+  });
+
+  const assignedEmployeeIds = [...new Set(activeAssignments.map((a) => a.employeeId))];
+
   const employees = await prisma.employee.findMany({
-    where: { companyId, isActive: true },
+    where: {
+      companyId,
+      isActive: true,
+      id: { in: assignedEmployeeIds },
+    },
     select: { id: true },
   });
 
@@ -419,16 +458,21 @@ export async function markAllActiveEmployees(
     notes: input.notes,
   }));
 
-  return markBulkAttendance(companyId, {
+  const bulkResult = await markBulkAttendance(companyId, {
     date: input.date,
     entries,
   });
+
+  return {
+    ...bulkResult,
+    totalEligible: employees.length,
+  };
 }
 
 export async function getDailySheet(companyId: string, dateStr: string) {
   const dayDate = parseDateOnly(dateStr);
 
-  const [employees, attendanceDays] = await Promise.all([
+  const [employees, attendanceDays, assignments] = await Promise.all([
     prisma.employee.findMany({
       where: { companyId, isActive: true },
       select: {
@@ -448,7 +492,24 @@ export async function getDailySheet(companyId: string, dateStr: string) {
         date: dayDate,
       },
     }),
+    prisma.employeeAssignment.findMany({
+      where: {
+        client: { companyId },
+        isActive: true,
+      },
+      include: {
+        client: { select: { id: true, name: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    }),
   ]);
+
+  const assignmentMap = new Map<string, { id: string; name: string }>();
+  for (const a of assignments) {
+    if (!assignmentMap.has(a.employeeId)) {
+      assignmentMap.set(a.employeeId, { id: a.client.id, name: a.client.name });
+    }
+  }
 
   const dayMap = new Map(attendanceDays.map((d) => [d.employeeId, d]));
 
@@ -460,6 +521,8 @@ export async function getDailySheet(companyId: string, dateStr: string) {
 
   const rows = employees.map((emp) => {
     const record = dayMap.get(emp.id) || null;
+    const assignedClient = assignmentMap.get(emp.id) || null;
+
     if (record) {
       if (record.status === 'PRESENT') presentCount += 1;
       else if (record.status === 'HALF_DAY') halfDayCount += 1;
@@ -470,6 +533,8 @@ export async function getDailySheet(companyId: string, dateStr: string) {
 
     return {
       ...emp,
+      assignedClient,
+      isAssigned: Boolean(assignedClient),
       attendance: record
         ? {
             id: record.id,
@@ -486,11 +551,15 @@ export async function getDailySheet(companyId: string, dateStr: string) {
 
   const markedCount = attendanceDays.length;
   const unmarkedCount = employees.length - markedCount;
+  const assignedCount = rows.filter((r) => r.isAssigned).length;
+  const unassignedCount = rows.length - assignedCount;
 
   return {
     date: dateStr,
     stats: {
       totalEmployees: employees.length,
+      assignedCount,
+      unassignedCount,
       markedCount,
       unmarkedCount: Math.max(0, unmarkedCount),
       presentCount, // Full day (8h)

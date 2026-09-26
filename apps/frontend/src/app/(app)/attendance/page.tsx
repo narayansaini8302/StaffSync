@@ -18,6 +18,7 @@ import {
   Check,
   Save,
   Zap,
+  Briefcase,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import {
@@ -26,8 +27,11 @@ import {
   Paginated,
   DailySheetResponse,
   DailySheetEmployee,
+  Client,
 } from '@/lib/types';
 import { LogEditor } from '@/components/attendance/log-editor';
+import { Modal } from '@/components/ui/modal';
+import { Button } from '@/components/ui/button';
 import { toast } from '@/lib/toast';
 
 type Tab = 'sheet' | 'daily' | 'logs';
@@ -116,6 +120,22 @@ function DailySheetView() {
   const [savingRows, setSavingRows] = useState<Record<string, boolean>>({});
   const [batchActionLoading, setBatchActionLoading] = useState(false);
 
+  // Clients query for assignment popup
+  const clientsQuery = useQuery({
+    queryKey: ['clients'],
+    queryFn: () => api.get<{ data: Client[] }>('/api/clients'),
+  });
+
+  // Unassigned prompt popup state
+  const [unassignedPrompt, setUnassignedPrompt] = useState<{
+    employee: DailySheetEmployee;
+    pendingStatus?: 'PRESENT' | 'HALF_DAY' | 'ABSENT' | 'LEAVE';
+    pendingHours?: number;
+    pendingNotes?: string;
+  } | null>(null);
+  const [assigningClientId, setAssigningClientId] = useState('');
+  const [assigningLoading, setAssigningLoading] = useState(false);
+
   // Fetch daily attendance sheet
   const query = useQuery({
     queryKey: ['attendance-daily-sheet', selectedDate],
@@ -155,6 +175,17 @@ function DailySheetView() {
     customHours?: number,
     customNotes?: string,
   ) => {
+    const emp = (query.data?.employees ?? []).find((e) => e.id === employeeId);
+    if (emp && !emp.isAssigned) {
+      setUnassignedPrompt({
+        employee: emp,
+        pendingStatus: status,
+        pendingHours: customHours,
+        pendingNotes: customNotes,
+      });
+      return;
+    }
+
     setSavingRows((prev) => ({ ...prev, [employeeId]: true }));
     try {
       // Default: Full Day = 8h, Half Day = 4h, Absent/Leave = 0h
@@ -185,13 +216,71 @@ function DailySheetView() {
       toast.success('Attendance updated', `Marked as ${label}`);
       invalidate();
     } catch (e: any) {
+      if (e?.error === 'EMPLOYEE_NOT_ASSIGNED_TO_CLIENT' || e?.message?.includes('assign')) {
+        if (emp) {
+          setUnassignedPrompt({
+            employee: emp,
+            pendingStatus: status,
+            pendingHours: customHours,
+            pendingNotes: customNotes,
+          });
+          return;
+        }
+      }
       toast.error('Failed to mark attendance', e?.message || 'Server error');
     } finally {
       setSavingRows((prev) => ({ ...prev, [employeeId]: false }));
     }
   };
 
-  // Batch action: Mark all active staff
+  // Assign client and immediately apply pending attendance
+  const handleAssignAndMark = async () => {
+    if (!unassignedPrompt || !assigningClientId) return;
+    setAssigningLoading(true);
+    try {
+      await api.post('/api/assignments', {
+        clientId: assigningClientId,
+        employeeId: unassignedPrompt.employee.id,
+        startDate: selectedDate,
+      });
+
+      if (unassignedPrompt.pendingStatus) {
+        let hours = unassignedPrompt.pendingHours;
+        if (hours === undefined) {
+          if (unassignedPrompt.pendingStatus === 'PRESENT') hours = 8;
+          else if (unassignedPrompt.pendingStatus === 'HALF_DAY') hours = 4;
+          else hours = 0;
+        }
+
+        await api.post('/api/attendance/manual', {
+          employeeId: unassignedPrompt.employee.id,
+          date: selectedDate,
+          status: unassignedPrompt.pendingStatus,
+          hours,
+          notes: unassignedPrompt.pendingNotes,
+        });
+      }
+
+      const clientObj = (clientsQuery.data?.data ?? []).find((c) => c.id === assigningClientId);
+      toast.success(
+        'Assigned to Client',
+        unassignedPrompt.pendingStatus
+          ? `Assigned to ${clientObj?.name ?? 'client'} & marked attendance!`
+          : `Assigned ${unassignedPrompt.employee.firstName} to ${clientObj?.name ?? 'client'}!`,
+      );
+
+      setUnassignedPrompt(null);
+      setAssigningClientId('');
+      invalidate();
+      qc.invalidateQueries({ queryKey: ['assignments'] });
+    } catch (err: any) {
+      toast.error('Failed to assign client', err?.message || 'Server error');
+    } finally {
+      setAssigningLoading(false);
+    }
+  };
+
+  // Batch action: Mark all active assigned staff
   const handleQuickAll = async (status: 'PRESENT' | 'HALF_DAY' | 'ABSENT') => {
     const statusLabel =
       status === 'PRESENT'
@@ -200,11 +289,23 @@ function DailySheetView() {
         ? 'Half Day (4 Hours)'
         : 'Absent (0 Hours)';
 
-    if (
-      !confirm(
-        `Are you sure you want to mark ALL active employees as "${statusLabel}" for ${selectedDate}?`,
-      )
-    ) {
+    const assignedEmps = (query.data?.employees ?? []).filter((e) => e.isAssigned);
+    const unassignedEmps = (query.data?.employees ?? []).filter((e) => !e.isAssigned);
+
+    if (assignedEmps.length === 0) {
+      toast.error(
+        'No employees assigned to clients',
+        'Please assign at least one employee to a client before marking attendance.',
+      );
+      return;
+    }
+
+    const message =
+      unassignedEmps.length > 0
+        ? `Are you sure you want to mark ${assignedEmps.length} assigned employees as "${statusLabel}" for ${selectedDate}?\n\nNote: ${unassignedEmps.length} unassigned employees will be skipped until assigned to a client.`
+        : `Are you sure you want to mark ALL ${assignedEmps.length} active employees as "${statusLabel}" for ${selectedDate}?`;
+
+    if (!confirm(message)) {
       return;
     }
 
@@ -215,7 +316,12 @@ function DailySheetView() {
         status,
         notes: `Bulk quick mark: ${statusLabel}`,
       });
-      toast.success('Bulk attendance applied', `All employees marked as ${statusLabel}`);
+      toast.success(
+        'Bulk attendance applied',
+        unassignedEmps.length > 0
+          ? `${assignedEmps.length} assigned employees marked (${unassignedEmps.length} unassigned skipped)`
+          : `All employees marked as ${statusLabel}`,
+      );
       invalidate();
     } catch (e: any) {
       toast.error('Failed to apply bulk attendance', e?.message || 'Server error');
@@ -456,8 +562,23 @@ function DailySheetView() {
                           {emp.lastName.charAt(0)}
                         </div>
                         <div>
-                          <div className="font-medium text-fg">
-                            {emp.firstName} {emp.lastName}
+                          <div className="font-medium text-fg flex items-center gap-2">
+                            <span>
+                              {emp.firstName} {emp.lastName}
+                            </span>
+                            {emp.isAssigned ? (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-medium text-brand bg-brand-soft px-1.5 py-0.5 rounded border border-brand/20">
+                                <Briefcase size={10} /> {emp.assignedClient?.name}
+                              </span>
+                            ) : (
+                              <button
+                                onClick={() => setUnassignedPrompt({ employee: emp })}
+                                className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 px-1.5 py-0.5 rounded border border-amber-500/30 transition text-left cursor-pointer"
+                                title="Click to assign to a client"
+                              >
+                                <AlertCircle size={10} /> Assign Client
+                              </button>
+                            )}
                           </div>
                           <div className="text-xs font-mono text-muted">
                             {emp.employeeCode}
@@ -576,6 +697,92 @@ function DailySheetView() {
           </table>
         </div>
       </div>
+
+      {/* "Please Assign to a Client" Popup Dialog */}
+      <Modal
+        open={!!unassignedPrompt}
+        onClose={() => {
+          setUnassignedPrompt(null);
+          setAssigningClientId('');
+        }}
+        title="Please Assign to a Client"
+      >
+        {unassignedPrompt && (
+          <div className="space-y-4">
+            <div className="flex items-start gap-3 p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400">
+              <AlertCircle size={20} className="shrink-0 mt-0.5" />
+              <div className="text-xs sm:text-sm">
+                <p className="font-semibold text-fg">
+                  {unassignedPrompt.employee.firstName} {unassignedPrompt.employee.lastName} ({unassignedPrompt.employee.employeeCode}) is not assigned to any client.
+                </p>
+                <p className="mt-1 text-fg-2">
+                  In StaffSync, attendance can only be marked for staff who are assigned to an active client contract. Please select a client to assign this employee.
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-fg">
+                Select Client <span className="text-danger">*</span>
+              </label>
+              <select
+                value={assigningClientId}
+                onChange={(e) => setAssigningClientId(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg bg-surface border border-subtle text-fg text-sm focus:outline-none focus:border-brand"
+              >
+                <option value="">-- Choose a Client --</option>
+                {(clientsQuery.data?.data ?? []).map((client) => (
+                  <option key={client.id} value={client.id}>
+                    {client.name} {client.gstin ? `(${client.gstin})` : ''}
+                  </option>
+                ))}
+              </select>
+              {(clientsQuery.data?.data ?? []).length === 0 && (
+                <p className="text-xs text-amber-500 mt-1">
+                  No clients found yet. Please create a client in the Clients tab first.
+                </p>
+              )}
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-subtle">
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setUnassignedPrompt(null);
+                  setAssigningClientId('');
+                }}
+                disabled={assigningLoading}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleAssignAndMark}
+                disabled={!assigningClientId || assigningLoading}
+                className="bg-brand text-white hover:bg-brand/90"
+              >
+                {assigningLoading ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    Assigning...
+                  </>
+                ) : unassignedPrompt.pendingStatus ? (
+                  `Assign & Mark ${
+                    unassignedPrompt.pendingStatus === 'PRESENT'
+                      ? 'Full Day (8h)'
+                      : unassignedPrompt.pendingStatus === 'HALF_DAY'
+                      ? 'Half Day (4h)'
+                      : unassignedPrompt.pendingStatus === 'ABSENT'
+                      ? 'Absent'
+                      : 'Leave'
+                  }`
+                ) : (
+                  'Assign Client'
+                )}
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }
