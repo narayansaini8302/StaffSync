@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { requireAuth, requireRole } from '../../middleware/auth';
+import { createEmailRateLimiter } from '../../middleware/rate-limit';
 import {
   createPayrollRun,
   processPayrollRun,
@@ -9,10 +10,26 @@ import {
   computePayslipForEmployee,
   listPayrollRuns,
   getPayrollRunWithPayslips,
+  sendPayslipEmail,
+  sendPayrollRunEmails,
 } from './payroll.service';
 
 export const payrollRouter = Router();
 payrollRouter.use(requireAuth);
+
+const singleEmailLimiter = createEmailRateLimiter({
+  windowSec: 60,
+  maxRequests: 15,
+  keyPrefix: 'email:payslip',
+  message: 'Email rate limit exceeded. Please wait a minute before sending more payslips.',
+});
+
+const bulkEmailLimiter = createEmailRateLimiter({
+  windowSec: 300,
+  maxRequests: 3,
+  keyPrefix: 'email:payroll-bulk',
+  message: 'Bulk payroll email rate limit exceeded. Please wait a few minutes before triggering another bulk run.',
+});
 
 const runSchema = z.object({
   periodStart: z.string(),
@@ -84,6 +101,45 @@ payrollRouter.get('/payslips/:id/pdf', async (req, res) => {
     res.status(500).json({ error: 'PDF generation failed' });
   }
 });
+
+// EMAIL SINGLE PAYSLIP
+payrollRouter.post('/payslips/:id/send-email', requireRole('ADMIN', 'HR'), singleEmailLimiter, async (req, res) => {
+  const emailSchema = z.object({
+    recipientEmail: z.string().email().optional(),
+  });
+  const parsed = emailSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+
+  try {
+    const result = await sendPayslipEmail(
+      req.user!.companyId,
+      String(req.params.id),
+      parsed.data.recipientEmail,
+    );
+    res.json(result);
+  } catch (e: any) {
+    if (e.message === 'NOT_FOUND')
+      return res.status(404).json({ error: 'Payslip not found' });
+    if (e.message === 'RECIPIENT_EMAIL_REQUIRED')
+      return res.status(400).json({ error: 'Employee has no valid email address configured' });
+    console.error('[Payroll Email Error]:', e);
+    res.status(500).json({ error: 'Failed to send payslip email', detail: e.message });
+  }
+});
+
+// BULK EMAIL PAYSLIPS IN A RUN
+payrollRouter.post('/runs/:id/send-emails', requireRole('ADMIN', 'HR'), bulkEmailLimiter, async (req, res) => {
+  try {
+    const result = await sendPayrollRunEmails(req.user!.companyId, String(req.params.id));
+    res.json(result);
+  } catch (e: any) {
+    if (e.message === 'RUN_NOT_FOUND')
+      return res.status(404).json({ error: 'Payroll run not found' });
+    console.error('[Payroll Bulk Email Error]:', e);
+    res.status(500).json({ error: 'Failed to send payroll emails', detail: e.message });
+  }
+});
+
 
 // ---------------------------------------------------------------------------
 // Preview (no persistence)

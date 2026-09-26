@@ -44,11 +44,11 @@ export function ToastHost() {
   const remove = useToasts((s) => s.remove);
 
   return (
-    <div className="fixed top-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none">
+    <div className="fixed top-3 right-3 left-3 sm:left-auto sm:right-4 sm:top-4 z-[100] flex flex-col gap-2 pointer-events-none items-end">
       {toasts.map((t) => (
         <div
           key={t.id}
-          className={`pointer-events-auto w-80 rounded-lg border shadow-lg backdrop-blur px-4 py-3 flex items-start gap-3 animate-in slide-in-from-right ${
+          className={`pointer-events-auto w-full sm:w-80 max-w-[calc(100vw-24px)] rounded-xl border shadow-lg backdrop-blur px-4 py-3 flex items-start gap-3 animate-in slide-in-from-top-2 sm:slide-in-from-right duration-200 ${
             t.kind === 'success'
               ? 'bg-green-500/10 border-green-500/30 text-green-200'
               : t.kind === 'error'

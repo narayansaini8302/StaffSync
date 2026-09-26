@@ -1,100 +1,278 @@
 <!DOCTYPE html>
 <html>
+
 <head>
-<meta charset="utf-8" />
-<style>
-  * { box-sizing: border-box; }
-  body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; color: #1a1a1a; font-size: 12px; margin: 0; padding: 25px 30px; }
-  h1 { font-size: 28px; margin: 0; letter-spacing: 2px; }
-  .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #0D47A1; padding-bottom: 14px; margin-bottom: 24px; }
-  .header .left h1 { color: #0D47A1; margin-bottom: 8px; }
-  .header .right { text-align: right; font-size: 12px; line-height: 1.6; }
-  .meta { color: #555; font-size: 11px; line-height: 1.5; }
-  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
-  .box { border: 1px solid #e0e0e0; padding: 14px; border-radius: 6px; background: #fafbfc; }
-  .box h2 { font-size: 11px; margin: 0 0 8px; text-transform: uppercase; color: #0D47A1; letter-spacing: 1px; }
-  .box .line { margin-bottom: 4px; font-size: 11px; }
-  table { width: 100%; border-collapse: collapse; margin-bottom: 18px; }
-  th { background: #E3F2FD; color: #0D47A1; font-size: 10px; text-transform: uppercase; padding: 10px 12px; text-align: left; border-bottom: 2px solid #90CAF9; letter-spacing: 0.5px; }
-  td { padding: 10px 12px; border-bottom: 1px solid #eee; font-size: 12px; }
-  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
-  tr.line-item:nth-child(even) { background: #fbfcfe; }
-  .totals { margin-left: auto; width: 340px; margin-top: 10px; }
-  .totals table td { padding: 8px 12px; font-size: 12px; }
-  .totals .grand-total td { font-size: 17px; font-weight: bold; color: #0D47A1; border-top: 3px solid #0D47A1; padding-top: 12px; }
-  .amount-words { margin-top: 20px; padding: 12px; background: #f7fafd; border-left: 3px solid #2196F3; font-size: 11px; border-radius: 3px; }
-  .annexure-note { margin-top: 20px; padding: 10px 14px; background: #fff8e1; border-left: 3px solid #f0c040; font-size: 11px; border-radius: 3px; }
-  .footer { margin-top: 34px; padding-top: 14px; border-top: 1px solid #ddd; font-size: 10px; color: #666; }
-  .footer .bank { margin-bottom: 8px; font-size: 11px; }
-  .stamp { text-align: right; margin-top: 40px; font-size: 11px; }
-  .signature-line { display: inline-block; border-top: 1px solid #999; padding-top: 4px; min-width: 200px; margin-top: 8px; }
-</style>
+  <meta charset="utf-8" />
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+      color: #1a1a1a;
+      font-size: 12px;
+      margin: 0;
+      padding: 25px 30px;
+    }
+
+    h1 {
+      font-size: 28px;
+      margin: 0;
+      letter-spacing: 2px;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      border-bottom: 3px solid #0D47A1;
+      padding-bottom: 14px;
+      margin-bottom: 24px;
+    }
+
+    .header .left h1 {
+      color: #0D47A1;
+      margin-bottom: 8px;
+    }
+
+    .header .right {
+      text-align: right;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .meta {
+      color: #555;
+      font-size: 11px;
+      line-height: 1.5;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+
+    .box {
+      border: 1px solid #e0e0e0;
+      padding: 14px;
+      border-radius: 6px;
+      background: #fafbfc;
+    }
+
+    .box h2 {
+      font-size: 11px;
+      margin: 0 0 8px;
+      text-transform: uppercase;
+      color: #0D47A1;
+      letter-spacing: 1px;
+    }
+
+    .box .line {
+      margin-bottom: 4px;
+      font-size: 11px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 18px;
+    }
+
+    th {
+      background: #E3F2FD;
+      color: #0D47A1;
+      font-size: 10px;
+      text-transform: uppercase;
+      padding: 10px 12px;
+      text-align: left;
+      border-bottom: 2px solid #90CAF9;
+      letter-spacing: 0.5px;
+    }
+
+    td {
+      padding: 10px 12px;
+      border-bottom: 1px solid #eee;
+      font-size: 12px;
+    }
+
+    td.num,
+    th.num {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    tr.line-item:nth-child(even) {
+      background: #fbfcfe;
+    }
+
+    .totals {
+      margin-left: auto;
+      width: 340px;
+      margin-top: 10px;
+    }
+
+    .totals table td {
+      padding: 8px 12px;
+      font-size: 12px;
+    }
+
+    .totals .grand-total td {
+      font-size: 17px;
+      font-weight: bold;
+      color: #0D47A1;
+      border-top: 3px solid #0D47A1;
+      padding-top: 12px;
+    }
+
+    .amount-words {
+      margin-top: 20px;
+      padding: 12px;
+      background: #f7fafd;
+      border-left: 3px solid #2196F3;
+      font-size: 11px;
+      border-radius: 3px;
+    }
+
+    .annexure-note {
+      margin-top: 20px;
+      padding: 10px 14px;
+      background: #fff8e1;
+      border-left: 3px solid #f0c040;
+      font-size: 11px;
+      border-radius: 3px;
+    }
+
+    .footer {
+      margin-top: 34px;
+      padding-top: 14px;
+      border-top: 1px solid #ddd;
+      font-size: 10px;
+      color: #666;
+    }
+
+    .footer .bank {
+      margin-bottom: 8px;
+      font-size: 11px;
+    }
+
+    .stamp {
+      text-align: right;
+      margin-top: 40px;
+      font-size: 11px;
+    }
+
+    .signature-line {
+      display: inline-block;
+      border-top: 1px solid #999;
+      padding-top: 4px;
+      min-width: 200px;
+      margin-top: 8px;
+    }
+  </style>
 </head>
+
 <body>
 
-<div class="header">
-   <div class="left">
-    {{#if companyLogo}}
+  <div class="header">
+    <div class="left">
+      {{#if companyLogo}}
       <img src="http://localhost:4000{{companyLogo}}" alt="Logo" style="height: 50px; margin-bottom: 8px;" />
-    {{/if}}
-    <h1>TAX INVOICE</h1>
-    <div class="meta">{{companyName}}</div>
-    {{#if companyGstin}}<div class="meta">GSTIN: {{companyGstin}}</div>{{/if}}
-    <div class="meta">{{companyAddress}}</div>
-    <div class="meta">State Code: {{companyState}}</div>
-  </div>
-  <div class="right">
-    <div><strong>Invoice No:</strong> {{invoiceNumber}}</div>
-    <div><strong>Date:</strong> {{issueDate}}</div>
-    <div><strong>Period:</strong> {{periodStart}} to {{periodEnd}}</div>
-    {{#if dueDate}}<div><strong>Due Date:</strong> {{dueDate}}</div>{{/if}}
-  </div>
-</div>
-
-<div class="grid">
-  <div class="box">
-    <h2>Bill To</h2>
-    <div class="line"><strong>{{clientName}}</strong></div>
-    {{#if clientGstin}}<div class="line">GSTIN: {{clientGstin}}</div>{{/if}}
-    <div class="line">{{clientAddress}}</div>
-    {{#if clientState}}<div class="line">State Code: {{clientState}}</div>{{/if}}
-    {{#if clientEmail}}<div class="line">{{clientEmail}}</div>{{/if}}
-    {{#if clientPhone}}<div class="line">{{clientPhone}}</div>{{/if}}
-  </div>
-  <div class="box">
-    <h2>Invoice Summary</h2>
-    <div class="line">Total Employees: <strong>{{totalEmployees}}</strong></div>
-    <div class="line">Total Hours: <strong>{{totalHours}}</strong></div>
-    <div class="line">Service Categories: <strong>{{categoryCount}}</strong></div>
-    <div class="line" style="margin-top: 8px; color: #0D47A1;">
-      <strong>Detailed employee-wise breakdown attached as Annexure.</strong>
+      {{/if}}
+      <h1>{{#if invoiceTitle}}{{invoiceTitle}}{{else}}TAX INVOICE{{/if}}</h1>
+      <div class="meta">{{companyName}}</div>
+      {{#if companyGstin}}<div class="meta">GSTIN: {{companyGstin}}</div>{{/if}}
+      <div class="meta">{{companyAddress}}</div>
+      <div class="meta">State Code: {{companyState}}</div>
+    </div>
+    <div class="right">
+      <div><strong>Invoice No:</strong> {{invoiceNumber}}</div>
+      <div><strong>Date:</strong> {{issueDate}}</div>
+      {{#if periodStart}}<div><strong>Period:</strong> {{periodStart}} to {{periodEnd}}</div>{{/if}}
+      {{#if dueDate}}<div><strong>Due Date:</strong> {{dueDate}}</div>{{/if}}
     </div>
   </div>
-</div>
 
-<h3 style="font-size: 13px; margin: 0 0 10px; color: #0D47A1;">Description of Services</h3>
+  <div class="grid">
+    <div class="box">
+      <h2>Bill To</h2>
+      <div class="line"><strong>{{clientName}}</strong></div>
+      {{#if clientGstin}}<div class="line">GSTIN: {{clientGstin}}</div>{{/if}}
+      <div class="line">{{clientAddress}}</div>
+      {{#if clientState}}<div class="line">State Code: {{clientState}}</div>{{/if}}
+      {{#if clientEmail}}<div class="line">{{clientEmail}}</div>{{/if}}
+      {{#if clientPhone}}<div class="line">{{clientPhone}}</div>{{/if}}
+    </div>
+    <div class="box">
+      <h2>{{#if isGeneralInvoice}}Invoice Summary{{else}}Attendance Summary{{/if}}</h2>
+      {{#if isGeneralInvoice}}
+      <div class="line">Total Line Items: <strong>{{totalItems}}</strong></div>
+      <div class="line">Payment Status: <strong>{{invoiceStatus}}</strong></div>
+      <div class="line" style="margin-top: 8px; color: #0D47A1;">
+        <strong>Computer-generated general commercial invoice.</strong>
+      </div>
+      {{else}}
+      <div class="line">Total Employees: <strong>{{totalEmployees}}</strong></div>
+      <div class="line">Total Hours: <strong>{{totalHours}}</strong></div>
+      <div class="line">Service Categories: <strong>{{categoryCount}}</strong></div>
+      <div class="line" style="margin-top: 8px; color: #0D47A1;">
+        <strong>Detailed employee-wise breakdown attached as Annexure.</strong>
+      </div>
+      {{/if}}
+    </div>
+  </div>
 
-<table>
-  <thead>
-    <tr>
-      <th style="width: 50px;">#</th>
-      <th>Service Category</th>
-      <th class="num" style="width: 100px;">Employees</th>
-      <th class="num" style="width: 100px;">Hours</th>
-      <th class="num" style="width: 110px;">Rate/Hr</th>
-      <th class="num" style="width: 130px;">Amount</th>
-    </tr>
-  </thead>
-  <tbody>
-    {{#each categories}}
+  <h3 style="font-size: 13px; margin: 0 0 10px; color: #0D47A1;">
+    {{#if isGeneralInvoice}}Particulars / Description of Services{{else}}Description of Services{{/if}}
+  </h3>
+
+  {{#if isGeneralInvoice}}
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 50px;">#</th>
+        <th>Description / Service</th>
+        <th class="num" style="width: 100px;">Qty / Hrs</th>
+        <th class="num" style="width: 110px;">Rate (₹)</th>
+        <th class="num" style="width: 130px;">Amount (₹)</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each lineItemsList}}
+      <tr class="line-item">
+        <td>{{this.index}}</td>
+        <td><strong>{{this.description}}</strong></td>
+        <td class="num">{{this.quantity}}</td>
+        <td class="num">₹ {{this.rate}}</td>
+        <td class="num">₹ {{this.amount}}</td>
+      </tr>
+      {{/each}}
+    </tbody>
+  </table>
+  {{else}}
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 50px;">#</th>
+        <th>Service Category</th>
+        <th class="num" style="width: 100px;">Employees</th>
+        <th class="num" style="width: 100px;">Hours</th>
+        <th class="num" style="width: 110px;">Rate/Hr</th>
+        <th class="num" style="width: 130px;">Amount</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each categories}}
       <tr class="line-item">
         <td>{{this.index}}</td>
         <td>
           <strong>{{this.label}}</strong>
           {{#if this.range}}
-            <div style="font-size: 10px; color: #666; margin-top: 2px;">
-              ({{this.range}})
-            </div>
+          <div style="font-size: 10px; color: #666; margin-top: 2px;">
+            ({{this.range}})
+          </div>
           {{/if}}
         </td>
         <td class="num">{{this.employeeCount}}</td>
@@ -102,17 +280,18 @@
         <td class="num">{{this.avgRate}}</td>
         <td class="num">{{this.subtotal}}</td>
       </tr>
-    {{/each}}
-  </tbody>
-</table>
+      {{/each}}
+    </tbody>
+  </table>
+  {{/if}}
 
-<div class="totals">
-  <table>
-    <tr>
-      <td>Subtotal</td>
-      <td class="num">₹ {{subtotal}}</td>
-    </tr>
-    {{#if cgstAmount}}
+  <div class="totals">
+    <table>
+      <tr>
+        <td>Subtotal</td>
+        <td class="num">₹ {{subtotal}}</td>
+      </tr>
+      {{#if cgstAmount}}
       <tr>
         <td>CGST @ {{halfGstRate}}%</td>
         <td class="num">₹ {{cgstAmount}}</td>
@@ -121,50 +300,54 @@
         <td>SGST @ {{halfGstRate}}%</td>
         <td class="num">₹ {{sgstAmount}}</td>
       </tr>
-    {{/if}}
-    {{#if igstAmount}}
+      {{/if}}
+      {{#if igstAmount}}
       <tr>
         <td>IGST @ {{gstRate}}%</td>
         <td class="num">₹ {{igstAmount}}</td>
       </tr>
-    {{/if}}
-    <tr class="grand-total">
-      <td>Total</td>
-      <td class="num">₹ {{totalAmount}}</td>
-    </tr>
-  </table>
-</div>
-
-<div class="amount-words">
-  <strong>Amount in words:</strong> {{amountInWords}}
-</div>
-
-{{#if notes}}
-<div class="annexure-note">
-  <strong>Notes:</strong> {{notes}}
-</div>
-{{/if}}
-
-<div class="annexure-note">
-  <strong>Note:</strong> This invoice covers services provided by {{totalEmployees}} employees during the period
-  {{periodStart}} to {{periodEnd}}. A detailed employee-wise breakdown is enclosed in the Annexure document
-  (available on request or as a separate download).
-</div>
-
-<div class="footer">
-  <div class="bank">
-    <strong>Bank Details:</strong> {{bankName}} &nbsp;|&nbsp; A/C: {{bankAccount}} &nbsp;|&nbsp; IFSC: {{bankIfsc}}
+      {{/if}}
+      <tr class="grand-total">
+        <td>Total</td>
+        <td class="num">₹ {{totalAmount}}</td>
+      </tr>
+    </table>
   </div>
-  <div>Payment terms: Payment due within 30 days of invoice date. Please quote invoice number in all correspondence.</div>
-  <div style="margin-top: 8px;">This is a computer-generated invoice and does not require a physical signature.</div>
-</div>
 
-<div class="stamp">
-  <div>For <strong>{{companyName}}</strong></div>
-  <div style="margin-top: 60px;">
-    <span class="signature-line">Authorised Signatory</span>
+  <div class="amount-words">
+    <strong>Amount in words:</strong> {{amountInWords}}
   </div>
-</div>
+
+  {{#if notes}}
+  <div class="annexure-note">
+    <strong>Notes:</strong> {{notes}}
+  </div>
+  {{/if}}
+
+  {{#unless isGeneralInvoice}}
+  <div class="annexure-note">
+    <strong>Note:</strong> This invoice covers services provided by {{totalEmployees}} employees during the period
+    {{periodStart}} to {{periodEnd}}. A detailed employee-wise breakdown is enclosed in the Annexure document
+    (available on request or as a separate download).
+  </div>
+  {{/unless}}
+
+  <div class="footer">
+    <div class="bank">
+      <strong>Bank Details:</strong> {{bankName}} &nbsp;|&nbsp; A/C: {{bankAccount}} &nbsp;|&nbsp; IFSC: {{bankIfsc}}
+    </div>
+    <div>Payment terms: Payment due within 30 days of invoice date. Please quote invoice number in all correspondence.
+    </div>
+    <div style="margin-top: 8px;">This is a computer-generated invoice and does not require a physical signature.</div>
+  </div>
+
+  <div class="stamp">
+    <div>For <strong>{{companyName}}</strong></div>
+    <div style="margin-top: 60px;">
+      <span class="signature-line">Authorised Signatory</span>
+    </div>
+  </div>
 
 </body>
+
 </html>

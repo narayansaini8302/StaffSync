@@ -160,12 +160,19 @@ export async function recomputeDay(
     }
   }
 
-   // Round to nearest hour (30+ min → up)
+  // Round to nearest hour (30+ min → up)
   const roundedHours = Math.round(rawMinutes / 60);
   const totalMinutes = roundedHours * 60;
   const overtimeMins = 0;   // No overtime tracking
   const lateMins = 0;       // No late tracking
-  const status = 'PRESENT';
+  let status = 'ABSENT';
+  if (roundedHours >= 6) {
+    status = 'PRESENT';
+  } else if (roundedHours >= 3) {
+    status = 'HALF_DAY';
+  } else {
+    status = 'ABSENT';
+  }
 
   return prisma.attendanceDay.upsert({
     where: { employeeId_date: { employeeId, date: dayStart } },
@@ -272,124 +279,227 @@ export async function listDaily(companyId: string, query: ListDailyQuery) {
 }
 
 // ---------------------------------------------------------------------------
-// Kiosk + admin editing
+// Manual Attendance System (Full Day: 8h, Half Day: 4h, Absent: 0h)
 // ---------------------------------------------------------------------------
 
-export async function kioskPunch(
+export interface MarkManualAttendanceInput {
+  employeeId: string;
+  date: string; // YYYY-MM-DD
+  status: 'PRESENT' | 'HALF_DAY' | 'ABSENT' | 'LEAVE';
+  hours?: number;
+  notes?: string;
+}
+
+export function parseDateOnly(dateStr: string): Date {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
+}
+
+export async function markManualAttendance(
   companyId: string,
-  imageBuffer: Buffer,
-  direction: 'IN' | 'OUT',
-  faceServiceUrl: string,
+  input: MarkManualAttendanceInput,
 ) {
-  const form = new FormData();
-  form.append('file', new Blob([new Uint8Array(imageBuffer)]), 'punch.jpg');
-
-  const res = await fetch(`${faceServiceUrl}/recognize`, {
-    method: 'POST',
-    body: form as any,
-    signal: AbortSignal.timeout(30_000),
-  });
-
-  if (!res.ok) {
-    const text = await res.text();
-    if (res.status === 422) {
-      return { ok: false as const, error: 'No face detected. Position yourself and try again.' };
-    }
-    return { ok: false as const, error: `Face service error: ${res.status}`, detail: text };
-  }
-
-  const match = (await res.json()) as {
-    matched: boolean;
-    employeeId?: string;
-    confidence?: number;
-    distance?: number;
-    reason?: string;
-    bestGuess?: string;
-    error?: string;
-  };
-
-  if (match.reason === 'liveness_failed') {
-    return {
-      ok: false as const,
-      error: match.error ?? 'Liveness check failed. Please look directly at the camera.',
-    };
-  }
-
-  if (!match.matched || !match.employeeId) {
-    return {
-      ok: false as const,
-      error: 'Face not recognized. Ask your admin to enroll your face.',
-      bestGuess: match.bestGuess,
-    };
-  }
-
-  // Verify the matched employee belongs to this company
   const employee = await prisma.employee.findFirst({
-    where: { id: match.employeeId, companyId },
+    where: { id: input.employeeId, companyId },
   });
-  if (!employee || !employee.isActive) {
-    return { ok: false as const, error: 'Your account is inactive or not in this company.' };
+  if (!employee) throw new Error('EMPLOYEE_NOT_FOUND');
+
+  const dayDate = parseDateOnly(input.date);
+
+  // Standard: Full Day = 8 hours (480 mins), Half Day = 4 hours (240 mins), Absent/Leave = 0 mins
+  let totalMinutes = 0;
+  if (input.status === 'PRESENT') {
+    totalMinutes = input.hours != null ? Math.round(input.hours * 60) : 480;
+  } else if (input.status === 'HALF_DAY') {
+    totalMinutes = input.hours != null ? Math.round(input.hours * 60) : 240;
+  } else {
+    totalMinutes = 0;
   }
 
-  // Enforce one IN + one OUT per day
-  const todayStart = startOfDay(new Date());
-  const tomorrow = addDays(todayStart, 1);
+  let firstIn: Date | null = null;
+  let lastOut: Date | null = null;
+  if (input.status === 'PRESENT' || input.status === 'HALF_DAY') {
+    firstIn = new Date(dayDate.getTime() + 9 * 3600000); // 09:00 UTC
+    lastOut = new Date(firstIn.getTime() + totalMinutes * 60000);
+  }
 
-  const existingIn = await prisma.attendanceLog.findFirst({
+  const day = await prisma.attendanceDay.upsert({
     where: {
-      employeeId: employee.id,
-      companyId,
-      direction: 'IN',
-      timestamp: { gte: todayStart, lt: tomorrow },
+      employeeId_date: {
+        employeeId: input.employeeId,
+        date: dayDate,
+      },
     },
-    orderBy: { timestamp: 'asc' },
-  });
-
-  const existingOut = await prisma.attendanceLog.findFirst({
-    where: {
-      employeeId: employee.id,
+    create: {
+      employeeId: input.employeeId,
       companyId,
-      direction: 'OUT',
-      timestamp: { gte: todayStart, lt: tomorrow },
+      date: dayDate,
+      status: input.status,
+      totalMinutes,
+      overtimeMins: 0,
+      lateMins: 0,
+      firstIn,
+      lastOut,
     },
-    orderBy: { timestamp: 'desc' },
+    update: {
+      status: input.status,
+      totalMinutes,
+      firstIn,
+      lastOut,
+    },
   });
 
-  if (direction === 'IN' && existingIn) {
-    return {
-      ok: false as const,
-      error: `You already checked IN today at ${existingIn.timestamp.toLocaleTimeString()}. Please use CHECK OUT.`,
-    };
-  }
-  if (direction === 'OUT' && existingOut) {
-    return {
-      ok: false as const,
-      error: `You already checked OUT today at ${existingOut.timestamp.toLocaleTimeString()}. See you tomorrow!`,
-    };
-  }
-  if (direction === 'OUT' && !existingIn) {
-    return {
-      ok: false as const,
-      error: "You haven't checked IN yet today. Please use CHECK IN first.",
-    };
-  }
-
-  const result = await recordScan(companyId, {
-    employeeId: employee.id,
-    source: 'FACE',
-    direction,
-    confidence: match.confidence,
+  // Create audit log for transparency
+  await prisma.attendanceLog.create({
+    data: {
+      employeeId: input.employeeId,
+      companyId,
+      timestamp: new Date(),
+      direction: input.status === 'ABSENT' ? 'OUT' : 'IN',
+      source: 'MANUAL',
+      notes:
+        input.notes ||
+        `Manual: ${input.status} (${(totalMinutes / 60).toFixed(1)}h)`,
+    },
   });
+
+  return day;
+}
+
+export async function markBulkAttendance(
+  companyId: string,
+  input: {
+    date: string;
+    entries: Array<{
+      employeeId: string;
+      status: 'PRESENT' | 'HALF_DAY' | 'ABSENT' | 'LEAVE';
+      hours?: number;
+      notes?: string;
+    }>;
+  },
+) {
+  const results = [];
+  for (const entry of input.entries) {
+    try {
+      const res = await markManualAttendance(companyId, {
+        employeeId: entry.employeeId,
+        date: input.date,
+        status: entry.status,
+        hours: entry.hours,
+        notes: entry.notes,
+      });
+      results.push({ employeeId: entry.employeeId, success: true, day: res });
+    } catch (e: any) {
+      results.push({
+        employeeId: entry.employeeId,
+        success: false,
+        error: e.message,
+      });
+    }
+  }
+  return { updated: results.filter((r) => r.success).length, results };
+}
+
+export async function markAllActiveEmployees(
+  companyId: string,
+  input: {
+    date: string;
+    status: 'PRESENT' | 'HALF_DAY' | 'ABSENT';
+    notes?: string;
+  },
+) {
+  const employees = await prisma.employee.findMany({
+    where: { companyId, isActive: true },
+    select: { id: true },
+  });
+
+  const entries = employees.map((emp) => ({
+    employeeId: emp.id,
+    status: input.status,
+    notes: input.notes,
+  }));
+
+  return markBulkAttendance(companyId, {
+    date: input.date,
+    entries,
+  });
+}
+
+export async function getDailySheet(companyId: string, dateStr: string) {
+  const dayDate = parseDateOnly(dateStr);
+
+  const [employees, attendanceDays] = await Promise.all([
+    prisma.employee.findMany({
+      where: { companyId, isActive: true },
+      select: {
+        id: true,
+        employeeCode: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        category: true,
+        employmentType: true,
+      },
+      orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }],
+    }),
+    prisma.attendanceDay.findMany({
+      where: {
+        companyId,
+        date: dayDate,
+      },
+    }),
+  ]);
+
+  const dayMap = new Map(attendanceDays.map((d) => [d.employeeId, d]));
+
+  let presentCount = 0;
+  let halfDayCount = 0;
+  let absentCount = 0;
+  let leaveCount = 0;
+  let totalMinutes = 0;
+
+  const rows = employees.map((emp) => {
+    const record = dayMap.get(emp.id) || null;
+    if (record) {
+      if (record.status === 'PRESENT') presentCount += 1;
+      else if (record.status === 'HALF_DAY') halfDayCount += 1;
+      else if (record.status === 'ABSENT') absentCount += 1;
+      else if (record.status === 'LEAVE') leaveCount += 1;
+      totalMinutes += record.totalMinutes;
+    }
+
+    return {
+      ...emp,
+      attendance: record
+        ? {
+            id: record.id,
+            status: record.status,
+            totalMinutes: record.totalMinutes,
+            hours: Math.round((record.totalMinutes / 60) * 10) / 10,
+            firstIn: record.firstIn,
+            lastOut: record.lastOut,
+            updatedAt: record.updatedAt,
+          }
+        : null,
+    };
+  });
+
+  const markedCount = attendanceDays.length;
+  const unmarkedCount = employees.length - markedCount;
 
   return {
-    ok: true as const,
-    log: result.log,
-    day: result.day,
-    employee: {
-      id: employee.id,
-      name: `${employee.firstName} ${employee.lastName}`,
-      code: employee.employeeCode,
+    date: dateStr,
+    stats: {
+      totalEmployees: employees.length,
+      markedCount,
+      unmarkedCount: Math.max(0, unmarkedCount),
+      presentCount, // Full day (8h)
+      halfDayCount, // Half day (4h)
+      absentCount, // Absent (0h)
+      leaveCount,
+      totalHours: Math.round((totalMinutes / 60) * 10) / 10,
     },
+    employees: rows,
   };
 }
 
@@ -421,7 +531,7 @@ export async function editLog(
   const oldDay = await recomputeDay(companyId, log.employeeId, log.timestamp);
   const newDay =
     patch.timestamp &&
-    startOfDay(new Date(patch.timestamp)).getTime() !== startOfDay(log.timestamp).getTime()
+      startOfDay(new Date(patch.timestamp)).getTime() !== startOfDay(log.timestamp).getTime()
       ? await recomputeDay(companyId, updated.employeeId, updated.timestamp)
       : oldDay;
 

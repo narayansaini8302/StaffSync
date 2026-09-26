@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { Building2, Users, Briefcase, Cpu } from 'lucide-react';
+import { Building2, Users, Briefcase, FileText } from 'lucide-react';
 import { saApi } from '@/lib/super-admin-api';
 
 interface Stats {
@@ -10,6 +10,7 @@ interface Stats {
   users: number;
   employees: number;
   devices: number;
+  invoices?: number;
 }
 
 export default function SuperAdminOverview() {
@@ -38,7 +39,7 @@ export default function SuperAdminOverview() {
         />
         <StatCard label="Users" value={s?.users ?? '…'} icon={Users} />
         <StatCard label="Employees" value={s?.employees ?? '…'} icon={Briefcase} />
-        <StatCard label="Devices" value={s?.devices ?? '…'} icon={Cpu} />
+        <StatCard label="Invoices" value={s?.invoices ?? s?.devices ?? 0} icon={FileText} />
       </div>
 
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">

@@ -22,7 +22,7 @@ interface CompanyDetail {
     isActive: boolean;
     createdAt: string;
   }[];
-  _count: { employees: number; devices: number; payrollRuns: number };
+  _count: { employees: number; clients?: number; devices?: number; payrollRuns: number };
 }
 
 export default function CompanyDetailPage() {
@@ -87,9 +87,9 @@ export default function CompanyDetailPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <StatBox label="Employees" value={c._count.employees} />
-        <StatBox label="Devices" value={c._count.devices} />
+        <StatBox label="Clients" value={c._count.clients ?? 0} />
         <StatBox label="Payroll Runs" value={c._count.payrollRuns} />
       </div>
 
@@ -103,8 +103,9 @@ export default function CompanyDetailPage() {
           </Button>
         </div>
 
-        <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
-          <table className="w-full text-sm">
+        <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-sm">
+          <div className="overflow-x-auto w-full">
+            <table className="w-full text-sm min-w-[500px]">
             <thead className="bg-slate-900/60 border-b border-slate-800">
               <tr className="text-slate-400 text-left">
                 <th className="px-4 py-3 font-medium">Email</th>
@@ -150,6 +151,7 @@ export default function CompanyDetailPage() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       </div>
 

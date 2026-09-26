@@ -1,7 +1,7 @@
 import { prisma } from '../../config/prisma';
 import { payrollConfig } from '../../config/payroll';
 import { renderPdf } from '../../utils/pdf';
-import { sendMail } from '../../utils/email';
+import { sendMail, sendMailBatch } from '../../utils/email';
 import Handlebars from 'handlebars';
 import fs from 'fs';
 import path from 'path';
@@ -76,17 +76,22 @@ export async function computePayslipForEmployee(
   let halfDays = 0;
   let absentDays = 0;
   let totalMinutes = 0;
+  let overtimeMins = 0;
+  let lateMins = 0;
 
   for (const d of days) {
     if (d.status === 'PRESENT') presentDays += 1;
     else if (d.status === 'HALF_DAY') halfDays += 1;
     else if (d.status === 'ABSENT') absentDays += 1;
     totalMinutes += d.totalMinutes;
+    overtimeMins += d.overtimeMins;
+    lateMins += d.lateMins;
   }
 
   const totalHours = totalMinutes / 60;
-  const category = employee.category as EmployeeCategoryKey;
-  const hourlyRate = categoryDefaults[category].perHour;
+  const category = (employee.category as EmployeeCategoryKey) || 'HOUSEKEEPING';
+  const catDef = categoryDefaults[category] || categoryDefaults.HOUSEKEEPING;
+  const hourlyRate = catDef.perHour;
 
   const basePay = round2(totalHours * hourlyRate);
 
@@ -140,8 +145,8 @@ export async function computePayslipForEmployee(
     presentDays,
     absentDays,
     halfDays,
-    overtimeMins: 0,
-    lateMins: 0,
+    overtimeMins,
+    lateMins,
     grossPay,
     totalDeductions,
     netPay,
@@ -226,7 +231,7 @@ export async function processPayrollRun(
   if (run.status === 'COMPLETED') throw new Error('ALREADY_COMPLETED');
 
   const employees = await prisma.employee.findMany({
-    where: { companyId, isActive: true, baseSalary: { not: null } },
+    where: { companyId, isActive: true },
   });
 
   let totalGross = 0;
@@ -404,8 +409,9 @@ export async function regeneratePayslipPdf(
   const employee = await prisma.employee.findFirst({
     where: { id: slip.employeeId, companyId },
   });
-  const category = (employee?.category as EmployeeCategoryKey) ?? 'HOUSEKEEPING';
-  const hourlyRate = categoryDefaults[category].perHour;
+  const category = (employee?.category as EmployeeCategoryKey) || 'HOUSEKEEPING';
+  const catDef = categoryDefaults[category] || categoryDefaults.HOUSEKEEPING;
+  const hourlyRate = catDef.perHour;
 
   // Recompute hours from attendance_days in the period
   const days = await prisma.attendanceDay.findMany({
@@ -462,3 +468,153 @@ export async function regeneratePayslipPdf(
     slip: computed,
   });
 }
+
+// ---------------------------------------------------------------------------
+// Email Payslip
+// ---------------------------------------------------------------------------
+
+export async function sendPayslipEmail(
+  companyId: string,
+  payslipId: string,
+  customRecipient?: string,
+) {
+  const slip = await prisma.payslip.findUnique({
+    where: { id: payslipId },
+    include: {
+      payrollRun: { select: { companyId: true, periodStart: true, periodEnd: true } },
+    },
+  });
+  if (!slip || slip.payrollRun.companyId !== companyId) throw new Error('NOT_FOUND');
+
+  const recipient = (customRecipient || slip.email || '').trim();
+  if (!recipient || !recipient.includes('@')) {
+    throw new Error('RECIPIENT_EMAIL_REQUIRED');
+  }
+
+  const { getCompanyForPdf } = await import('../company/company.service');
+  const company = await getCompanyForPdf(companyId);
+
+  const pdfBuffer = await regeneratePayslipPdf(companyId, payslipId, company.name);
+  const periodStr = slip.periodStart.toISOString().slice(0, 7);
+  const formattedNetPay = fmt(slip.netPay);
+
+  const html = `
+    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; color: #1e293b; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px;">
+      <div style="border-bottom: 2px solid #3b82f6; padding-bottom: 16px; margin-bottom: 20px;">
+        <h2 style="color: #1e3a8a; margin: 0 0 6px 0; font-size: 22px;">${company.name || 'StaffSync'}</h2>
+        <p style="margin: 0; color: #64748b; font-size: 14px;">Salary Payslip — ${periodStr}</p>
+      </div>
+
+      <p style="font-size: 15px; line-height: 1.5;">Dear <strong>${slip.employeeName}</strong>,</p>
+      <p style="font-size: 14px; line-height: 1.5; color: #475569;">
+        Please find attached your salary payslip for the billing period 
+        <strong>${slip.periodStart.toISOString().slice(0, 10)}</strong> to 
+        <strong>${slip.periodEnd.toISOString().slice(0, 10)}</strong>.
+      </p>
+
+      <div style="background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin: 20px 0;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+          <tr>
+            <td style="padding: 6px 0; color: #64748b;">Employee Code:</td>
+            <td style="padding: 6px 0; font-weight: 600; text-align: right;">${slip.employeeCode}</td>
+          </tr>
+          <tr>
+            <td style="padding: 6px 0; color: #64748b;">Gross Earnings:</td>
+            <td style="padding: 6px 0; font-weight: 600; text-align: right;">₹ ${fmt(slip.grossPay)}</td>
+          </tr>
+          <tr>
+            <td style="padding: 6px 0; color: #64748b;">Total Deductions:</td>
+            <td style="padding: 6px 0; font-weight: 600; text-align: right; color: #ef4444;">- ₹ ${fmt(slip.totalDeductions)}</td>
+          </tr>
+          <tr style="border-top: 1px solid #e2e8f0;">
+            <td style="padding: 10px 0 4px 0; font-size: 16px; font-weight: bold; color: #0f172a;">Net Pay:</td>
+            <td style="padding: 10px 0 4px 0; font-size: 18px; font-weight: bold; text-align: right; color: #16a34a;">₹ ${formattedNetPay}</td>
+          </tr>
+        </table>
+      </div>
+
+      <p style="font-size: 13px; color: #64748b; line-height: 1.5;">
+        A copy of your payslip has been attached as a PDF to this email for your records. If you have any questions regarding your salary computation or deductions, please contact HR or Finance.
+      </p>
+
+      <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #e2e8f0; font-size: 11px; color: #94a3b8; line-height: 1.5;">
+        <p style="margin: 0 0 4px 0; font-weight: 600; color: #64748b;">${company.name}</p>
+        <p style="margin: 0 0 6px 0;">${company.address || ''} ${company.email ? `&bull; ${company.email}` : ''}</p>
+        <p style="margin: 0; font-style: italic;">CONFIDENTIALITY NOTICE: This transmission is intended solely for the designated recipient. It contains confidential financial and employment data. If you have received this message in error, please notify HR immediately.</p>
+      </div>
+    </div>
+  `;
+
+  const filename = `payslip-${slip.employeeCode}-${periodStr}.pdf`;
+  const mailResult = await sendMail({
+    to: recipient,
+    subject: `Payslip for ${periodStr} - ${slip.employeeName} (${slip.employeeCode})`,
+    html,
+    fromName: company.name,
+    replyTo: company.email || undefined,
+    companyId,
+    category: 'PAYSLIP',
+    attachments: [
+      {
+        filename,
+        content: pdfBuffer,
+        contentType: 'application/pdf',
+      },
+    ],
+  });
+
+  const now = new Date();
+  await prisma.payslip.update({
+    where: { id: payslipId },
+    data: { emailedAt: now },
+  });
+
+  return {
+    success: true,
+    recipient,
+    previewUrl: mailResult.previewUrl,
+    isTestAccount: mailResult.isTestAccount,
+    emailedAt: now,
+  };
+}
+
+export async function sendPayrollRunEmails(companyId: string, runId: string) {
+  const run = await prisma.payrollRun.findFirst({
+    where: { id: runId, companyId },
+    include: { payslips: true },
+  });
+  if (!run) throw new Error('RUN_NOT_FOUND');
+
+  const eligibleSlips = run.payslips.filter((s) => s.email && s.email.includes('@'));
+  const missingEmails = run.payslips.filter((s) => !s.email || !s.email.includes('@'));
+
+  const missingErrors = missingEmails.map((s) => ({
+    payslipId: s.id,
+    employeeName: s.employeeName,
+    error: 'No valid email address configured',
+  }));
+
+  const batchResult = await sendMailBatch(
+    eligibleSlips,
+    async (slip) => {
+      await sendPayslipEmail(companyId, slip.id);
+    },
+    2, // 2 concurrent workers for smooth pacing
+    200, // 200ms spacing to respect SMTP quotas
+  );
+
+  return {
+    total: run.payslips.length,
+    sent: batchResult.processed,
+    failed: batchResult.errors.length + missingErrors.length,
+    errors: [
+      ...missingErrors,
+      ...batchResult.errors.map((e) => ({
+        payslipId: e.item.id,
+        employeeName: e.item.employeeName,
+        error: e.error,
+      })),
+    ],
+  };
+}
+

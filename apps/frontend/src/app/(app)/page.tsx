@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useAuth } from '@/lib/auth';
 import { useQuery } from '@tanstack/react-query';
@@ -68,11 +68,11 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-fg">Dashboard</h1>
-        <p className="text-sm text-fg-2 mt-1">Welcome back, {user?.email}</p>
+        <h1 className="text-xl sm:text-2xl font-semibold text-fg">Dashboard</h1>
+        <p className="text-xs sm:text-sm text-fg-2 mt-1">Welcome back, {user?.email}</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <StatCard
           label="API Status"
           value={health.data?.status ?? '...'}
@@ -104,28 +104,28 @@ export default function DashboardPage() {
         />
       </div>
 
-      <div className="bg-surface border border-subtle rounded-xl p-6">
-        <h2 className="font-medium mb-3 text-fg">Quick Start</h2>
-        <ol className="text-sm text-fg-2 space-y-2 list-decimal list-inside">
+      <div className="bg-surface border border-subtle rounded-xl p-4 sm:p-6 shadow-sm">
+        <h2 className="font-semibold text-base mb-3 text-fg">Workflow Overview</h2>
+        <ol className="text-xs sm:text-sm text-fg-2 space-y-2.5 list-decimal list-inside leading-relaxed">
           <li>
-            Add employees on the{' '}
-            <strong className="text-fg">Employees</strong> page
+            Register staff directory on the{' '}
+            <strong className="text-fg">Employees</strong> page and email joining letters
           </li>
           <li>
-            Enroll each employee's face on the{' '}
-            <strong className="text-fg">Face Enroll</strong> page
+            Mark daily attendance with Full Day (8h) or Half Day (4h) on the{' '}
+            <strong className="text-fg">Attendance</strong> daily sheet
           </li>
           <li>
-            Set up a kiosk tablet to open{' '}
-            <strong className="text-fg">Kiosk Mode</strong>
+            Assign staff to client sites on the{' '}
+            <strong className="text-fg">Assignments & Clients</strong> pages
           </li>
           <li>
-            Review attendance on the{' '}
-            <strong className="text-fg">Attendance</strong> page
-          </li>
-          <li>
-            Run monthly payroll on the{' '}
+            Compute salary, generate PDFs and email payslips on the{' '}
             <strong className="text-fg">Payroll</strong> page
+          </li>
+          <li>
+            Generate client invoices, track Payment Taken & On Pending, and email invoices on the{' '}
+            <strong className="text-fg">Invoices</strong> page
           </li>
         </ol>
       </div>
@@ -145,13 +145,13 @@ function StatCard({
   icon: any;
 }) {
   return (
-    <div className="bg-surface border border-subtle rounded-xl p-4">
+    <div className="bg-surface border border-subtle rounded-xl p-3.5 sm:p-4 shadow-sm hover:border-brand/30 transition-colors">
       <div className="flex items-center justify-between">
-        <div className="text-xs text-fg-2">{label}</div>
-        <Icon size={16} className="text-muted" />
+        <div className="text-xs text-fg-2 font-medium truncate">{label}</div>
+        <Icon size={16} className="text-muted shrink-0 ml-2" />
       </div>
       <div
-        className={`text-2xl font-semibold mt-2 ${
+        className={`text-xl sm:text-2xl font-bold mt-1.5 sm:mt-2 truncate ${
           ok === true
             ? 'text-success'
             : ok === false

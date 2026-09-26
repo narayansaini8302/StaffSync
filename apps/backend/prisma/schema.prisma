@@ -38,7 +38,6 @@ model Company {
 
   users       User[]
   employees   Employee[]
-  devices     Device[]
   payrollRuns PayrollRun[]
   clients     Client[]
 
@@ -235,42 +234,6 @@ model AttendanceDay {
   @@map("attendance_days")
 }
 
-// ============ DEVICES ============
-
-model Device {
-  id        String   @id @default(uuid())
-  name      String
-  location  String?
-  type      String   @default("CAMERA")
-  isActive  Boolean  @default(true)
-
-  companyId String
-  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  apiKeys   DeviceApiKey[]
-
-  @@index([companyId])
-  @@map("devices")
-}
-
-model DeviceApiKey {
-  id         String   @id @default(uuid())
-  deviceId   String
-  device     Device   @relation(fields: [deviceId], references: [id], onDelete: Cascade)
-  keyHash    String   @unique
-  label      String?
-  lastUsedAt DateTime?
-  expiresAt  DateTime?
-  isActive   Boolean  @default(true)
-  createdAt  DateTime @default(now())
-
-  @@index([deviceId])
-  @@map("device_api_keys")
-}
-
 // ============ PAYROLL ============
 
 model PayrollRun {
@@ -418,6 +381,7 @@ model TaxInvoice {
   sgstAmount     Decimal  @default(0) @db.Decimal(12, 2)
   igstAmount     Decimal  @default(0) @db.Decimal(12, 2)
   totalAmount    Decimal  @db.Decimal(12, 2)
+  paidAmount     Decimal  @default(0) @db.Decimal(12, 2)
 
   status         String   @default("DRAFT")
   issuedAt       DateTime @default(now())
@@ -429,8 +393,9 @@ model TaxInvoice {
   updatedAt      DateTime @updatedAt
 
   lineItems      TaxInvoiceLineItem[]
+  payments       InvoicePayment[]
 
-  @@unique([companyId, invoiceNumber])
+  @@index([companyId, invoiceNumber])
   @@index([companyId, periodStart])
   @@index([clientId])
   @@map("tax_invoices")
@@ -451,4 +416,24 @@ model TaxInvoiceLineItem {
 
   @@index([invoiceId])
   @@map("tax_invoice_line_items")
+}
+
+model InvoicePayment {
+  id          String     @id @default(uuid())
+  invoiceId   String
+  invoice     TaxInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  companyId   String
+
+  amount      Decimal    @db.Decimal(12, 2)
+  paymentDate DateTime   @default(now())
+  paymentMode String     @default("BANK_TRANSFER") // CASH, UPI, BANK_TRANSFER, CHEQUE, OTHER
+  reference   String?    // UTR / Transaction ID / Cheque No
+  notes       String?
+
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([invoiceId])
+  @@index([companyId])
+  @@map("invoice_payments")
 }

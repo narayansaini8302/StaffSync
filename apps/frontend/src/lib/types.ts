@@ -101,6 +101,40 @@ export interface AttendanceDay {
   updatedAt: string;
 }
 
+export interface DailySheetEmployee {
+  id: string;
+  employeeCode: string;
+  firstName: string;
+  lastName: string;
+  email: string | null;
+  category: string;
+  employmentType: string;
+  attendance: {
+    id: string;
+    status: 'PRESENT' | 'HALF_DAY' | 'ABSENT' | 'LEAVE' | string;
+    totalMinutes: number;
+    hours: number;
+    firstIn?: string | null;
+    lastOut?: string | null;
+    updatedAt: string;
+  } | null;
+}
+
+export interface DailySheetResponse {
+  date: string;
+  stats: {
+    totalEmployees: number;
+    markedCount: number;
+    unmarkedCount: number;
+    presentCount: number; // Full day (8h)
+    halfDayCount: number; // Half day (4h)
+    absentCount: number;  // Absent (0h)
+    leaveCount: number;
+    totalHours: number;
+  };
+  employees: DailySheetEmployee[];
+}
+
 // ============ FACE ============
 
 export interface FaceEmbeddingRow {
@@ -247,7 +281,27 @@ export interface EmployeeAssignment {
   } | null;
 }
 
-export type InvoiceStatus = 'DRAFT' | 'SENT' | 'PAID' | 'CANCELLED';
+export type InvoiceStatus = 'DRAFT' | 'SENT' | 'PAID' | 'PARTIAL' | 'CANCELLED';
+
+export interface InvoicePayment {
+  id: string;
+  invoiceId: string;
+  companyId: string;
+  amount: string | number;
+  paymentDate: string;
+  paymentMode: string; // 'CASH' | 'UPI' | 'BANK_TRANSFER' | 'CHEQUE' | 'OTHER'
+  reference?: string | null;
+  notes?: string | null;
+  createdAt: string;
+}
+
+export interface RecordInvoicePaymentInput {
+  amount: number;
+  paymentDate?: string;
+  paymentMode?: string;
+  reference?: string;
+  notes?: string;
+}
 
 export interface TaxInvoice {
   id: string;
@@ -261,6 +315,8 @@ export interface TaxInvoice {
   sgstAmount: string | number;
   igstAmount: string | number;
   totalAmount: string | number;
+  paidAmount?: string | number;
+  pendingAmount?: string | number;
   status: InvoiceStatus;
   issuedAt: string;
   dueDate?: string | null;
@@ -268,9 +324,17 @@ export interface TaxInvoice {
   notes?: string | null;
   createdAt: string;
   updatedAt: string;
-  client?: { id: string; name: string; gstin?: string | null; address?: string };
+  client?: {
+    id: string;
+    name: string;
+    gstin?: string | null;
+    address?: string;
+    email?: string | null;
+    phone?: string | null;
+  };
   lineItems?: TaxInvoiceLineItem[];
-  _count?: { lineItems: number };
+  payments?: InvoicePayment[];
+  _count?: { lineItems: number; payments?: number };
 }
 
 export interface TaxInvoiceLineItem {
@@ -292,6 +356,7 @@ export interface GenerateInvoiceInput {
   gstMode?: 'auto' | 'cgst_sgst' | 'igst';
   notes?: string;
   dueDate?: string;
+  invoiceNumber?: string;
 }
 
 // ============ COMPANY ============

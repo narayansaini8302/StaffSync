@@ -1,29 +1,99 @@
 <!DOCTYPE html>
 <html>
+
 <head>
-<meta charset="utf-8" />
-<style>
-  body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; color: #222; font-size: 12px; }
-  h1 { font-size: 20px; margin: 0 0 4px; }
-  .header { display: flex; justify-content: space-between; border-bottom: 2px solid #333; padding-bottom: 8px; margin-bottom: 16px; }
-  .muted { color: #666; }
-  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
-  .box { background: #f7f7f9; padding: 10px; border-radius: 4px; }
-  .box .line { margin-bottom: 3px; }
-  .calc-basis { background: #e8f4ff; border-left: 3px solid #2196F3; padding: 8px 12px; margin-bottom: 16px; border-radius: 3px; font-size: 11px; }
-  table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
-  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #eee; }
-  th { background: #f0f0f4; }
-  .amount { text-align: right; font-variant-numeric: tabular-nums; }
-  .total { font-weight: bold; border-top: 2px solid #333; }
-  .footer { margin-top: 24px; font-size: 10px; color: #777; text-align: center; }
-</style>
+  <meta charset="utf-8" />
+  <style>
+    body {
+      font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+      color: #222;
+      font-size: 12px;
+    }
+
+    h1 {
+      font-size: 20px;
+      margin: 0 0 4px;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      border-bottom: 2px solid #333;
+      padding-bottom: 8px;
+      margin-bottom: 16px;
+    }
+
+    .muted {
+      color: #666;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .box {
+      background: #f7f7f9;
+      padding: 10px;
+      border-radius: 4px;
+    }
+
+    .box .line {
+      margin-bottom: 3px;
+    }
+
+    .calc-basis {
+      background: #e8f4ff;
+      border-left: 3px solid #2196F3;
+      padding: 8px 12px;
+      margin-bottom: 16px;
+      border-radius: 3px;
+      font-size: 11px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 16px;
+    }
+
+    th,
+    td {
+      text-align: left;
+      padding: 6px 8px;
+      border-bottom: 1px solid #eee;
+    }
+
+    th {
+      background: #f0f0f4;
+    }
+
+    .amount {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .total {
+      font-weight: bold;
+      border-top: 2px solid #333;
+    }
+
+    .footer {
+      margin-top: 24px;
+      font-size: 10px;
+      color: #777;
+      text-align: center;
+    }
+  </style>
 </head>
+
 <body>
-    <div class="header">
+  <div class="header">
     <div style="display: flex; align-items: center; gap: 12px;">
       {{#if companyLogo}}
-        <img src="http://localhost:4000{{companyLogo}}" alt="Logo" style="height: 40px;" />
+      <img src="http://localhost:4000{{companyLogo}}" alt="Logo" style="height: 40px;" />
       {{/if}}
       <div>
         <h1>Payslip</h1>
@@ -61,25 +131,43 @@
 
   <table>
     <thead>
-      <tr><th>Earnings</th><th class="amount">Amount</th></tr>
+      <tr>
+        <th>Earnings</th>
+        <th class="amount">Amount</th>
+      </tr>
     </thead>
     <tbody>
       {{#each earnings}}
-      <tr><td>{{label}}</td><td class="amount">{{amount}}</td></tr>
+      <tr>
+        <td>{{label}}</td>
+        <td class="amount">{{amount}}</td>
+      </tr>
       {{/each}}
-      <tr class="total"><td>Gross Pay</td><td class="amount">{{grossPay}}</td></tr>
+      <tr class="total">
+        <td>Gross Pay</td>
+        <td class="amount">{{grossPay}}</td>
+      </tr>
     </tbody>
   </table>
 
   <table>
     <thead>
-      <tr><th>Deductions</th><th class="amount">Amount</th></tr>
+      <tr>
+        <th>Deductions</th>
+        <th class="amount">Amount</th>
+      </tr>
     </thead>
     <tbody>
       {{#each deductions}}
-      <tr><td>{{label}}</td><td class="amount">{{amount}}</td></tr>
+      <tr>
+        <td>{{label}}</td>
+        <td class="amount">{{amount}}</td>
+      </tr>
       {{/each}}
-      <tr class="total"><td>Total Deductions</td><td class="amount">{{totalDeductions}}</td></tr>
+      <tr class="total">
+        <td>Total Deductions</td>
+        <td class="amount">{{totalDeductions}}</td>
+      </tr>
     </tbody>
   </table>
 
@@ -91,4 +179,5 @@
     This is a computer-generated payslip and does not require a signature.
   </div>
 </body>
+
 </html>

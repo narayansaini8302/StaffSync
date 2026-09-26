@@ -1,25 +1,19 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import multer from 'multer';
 import { requireAuth, requireRole } from '../../middleware/auth';
-import { requireKiosk } from '../../middleware/kiosk';
 import {
   recordScan,
   listLogs,
   listDaily,
-  kioskPunch,
   deleteLog,
   editLog,
+  markManualAttendance,
+  markBulkAttendance,
+  markAllActiveEmployees,
+  getDailySheet,
 } from './attendance.service';
 
 export const attendanceRouter = Router();
-
-const kioskUpload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 },
-});
-
-const FACE_SERVICE_URL = process.env.FACE_SERVICE_URL ?? 'http://localhost:5000';
 
 // ---------------------------------------------------------------------------
 // Admin-only: record a manual scan
@@ -90,45 +84,109 @@ attendanceRouter.get('/daily', requireAuth, async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
-// Kiosk punch — public, authenticated by X-Device-Key
-//
-// The kiosk is device-driven, so `companyId` comes from the device record.
-// We attach it in the kiosk middleware (see src/middleware/kiosk.ts).
+// Manual Attendance Endpoints (Full Day: 8h, Half Day: 4h, Absent: 0h)
 // ---------------------------------------------------------------------------
 
-attendanceRouter.post(
-  '/kiosk/punch',
-  requireKiosk,
-  kioskUpload.single('file'),
+const manualAttendanceSchema = z.object({
+  employeeId: z.string().uuid(),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD'),
+  status: z.enum(['PRESENT', 'HALF_DAY', 'ABSENT', 'LEAVE']),
+  hours: z.number().min(0).max(24).optional(),
+  notes: z.string().optional(),
+});
+
+const bulkAttendanceSchema = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD'),
+  entries: z.array(
+    z.object({
+      employeeId: z.string().uuid(),
+      status: z.enum(['PRESENT', 'HALF_DAY', 'ABSENT', 'LEAVE']),
+      hours: z.number().min(0).max(24).optional(),
+      notes: z.string().optional(),
+    }),
+  ),
+});
+
+const quickAllSchema = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD'),
+  status: z.enum(['PRESENT', 'HALF_DAY', 'ABSENT']),
+  notes: z.string().optional(),
+});
+
+attendanceRouter.get(
+  '/daily-sheet',
+  requireAuth,
+  requireRole('ADMIN', 'HR', 'MANAGER'),
   async (req, res) => {
-    if (!req.file) {
-      return res.status(400).json({ error: 'Missing file field "file"' });
-    }
-
-    const direction = req.body.direction;
-    if (direction !== 'IN' && direction !== 'OUT') {
-      return res.status(400).json({ error: 'direction must be IN or OUT' });
-    }
-
     try {
-      const result = await kioskPunch(
-        req.device!.companyId,
-        req.file.buffer,
-        direction,
-        FACE_SERVICE_URL,
-      );
-      const status = result.ok ? 201 : 200;
-      console.log(
-        '[KIOSK]',
-        result.ok ? 'OK' : 'FAIL',
-        direction,
-        '-',
-        (result as any).error ?? (result as any).reason ?? '',
-      );
-      res.status(status).json(result);
+      const dateStr =
+        (req.query.date as string) ||
+        new Date().toISOString().slice(0, 10);
+      const result = await getDailySheet(req.user!.companyId, dateStr);
+      res.json(result);
     } catch (e: any) {
-      console.error('Kiosk punch failed:', e);
-      res.status(500).json({ ok: false, error: 'Server error', detail: e.message });
+      console.error('getDailySheet error:', e);
+      res.status(500).json({ error: 'Failed to fetch daily attendance sheet', detail: e.message });
+    }
+  },
+);
+
+attendanceRouter.post(
+  '/manual',
+  requireAuth,
+  requireRole('ADMIN', 'HR', 'MANAGER'),
+  async (req, res) => {
+    const parsed = manualAttendanceSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: parsed.error.flatten() });
+    }
+    try {
+      const result = await markManualAttendance(req.user!.companyId, parsed.data);
+      res.status(200).json({ ok: true, day: result });
+    } catch (e: any) {
+      if (e.message === 'EMPLOYEE_NOT_FOUND') {
+        return res.status(404).json({ error: 'Employee not found' });
+      }
+      console.error('markManualAttendance error:', e);
+      res.status(500).json({ error: 'Failed to mark attendance', detail: e.message });
+    }
+  },
+);
+
+attendanceRouter.post(
+  '/manual/bulk',
+  requireAuth,
+  requireRole('ADMIN', 'HR', 'MANAGER'),
+  async (req, res) => {
+    const parsed = bulkAttendanceSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: parsed.error.flatten() });
+    }
+    try {
+      const result = await markBulkAttendance(req.user!.companyId, parsed.data);
+      res.status(200).json({ ok: true, ...result });
+    } catch (e: any) {
+      console.error('markBulkAttendance error:', e);
+      res.status(500).json({ error: 'Failed to mark bulk attendance', detail: e.message });
+    }
+  },
+);
+
+attendanceRouter.post(
+  '/manual/quick-all',
+  requireAuth,
+  requireRole('ADMIN', 'HR', 'MANAGER'),
+  async (req, res) => {
+    const parsed = quickAllSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: parsed.error.flatten() });
+    }
+    try {
+      const result = await markAllActiveEmployees(req.user!.companyId, parsed.data);
+      res.status(200).json({ ok: true, ...result });
+    } catch (e: any) {
+      console.error('markAllActiveEmployees error:', e);
+      res.status(500).json({ error: 'Failed to mark quick-all attendance', detail: e.message });
     }
   },
 );

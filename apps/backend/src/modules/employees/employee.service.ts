@@ -2,6 +2,7 @@ import { prisma } from '../../config/prisma';
 import { parsePagination, buildPaginated } from '../../utils/pagination';
 import { Prisma } from '@prisma/client';
 import { renderPdf } from '../../utils/pdf';
+import { sendMail } from '../../utils/email';
 import Handlebars from 'handlebars';
 import fs from 'fs';
 import path from 'path';
@@ -241,3 +242,115 @@ export async function generateJoiningLetterPdf(companyId: string, employeeId: st
   const html = compiledJoiningTemplate(data);
   return renderPdf(html, { pageRanges: '1' });
 }
+
+// ---------------------------------------------------------------------------
+// Email Joining Letter
+// ---------------------------------------------------------------------------
+
+export async function sendJoiningLetterEmail(
+  companyId: string,
+  employeeId: string,
+  customRecipient?: string,
+) {
+  const employee = await prisma.employee.findFirst({
+    where: { id: employeeId, companyId },
+  });
+  if (!employee) throw new Error('EMPLOYEE_NOT_FOUND');
+
+  const recipient = (customRecipient || employee.email || '').trim();
+  if (!recipient || !recipient.includes('@')) {
+    throw new Error('RECIPIENT_EMAIL_REQUIRED');
+  }
+
+  const { getCompanyForPdf } = await import('../company/company.service');
+  const company = await getCompanyForPdf(companyId);
+
+  const pdfBuffer = await generateJoiningLetterPdf(companyId, employeeId);
+  const fullName = `${employee.firstName} ${employee.lastName}`;
+  const joiningDateFormatted = employee.dateOfJoining.toLocaleDateString('en-IN', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+  });
+
+  const html = `
+    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; color: #1e293b; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px;">
+      <div style="border-bottom: 2px solid #2563eb; padding-bottom: 16px; margin-bottom: 20px;">
+        <h2 style="color: #1e3a8a; margin: 0 0 6px 0; font-size: 22px;">Welcome to ${company.name || 'our company'}!</h2>
+        <p style="margin: 0; color: #64748b; font-size: 14px;">Official Joining Letter & Onboarding</p>
+      </div>
+
+      <p style="font-size: 15px; line-height: 1.5;">Dear <strong>${fullName}</strong>,</p>
+      <p style="font-size: 14px; line-height: 1.6; color: #475569;">
+        We are thrilled to welcome you to <strong>${company.name || 'the team'}</strong>! 
+        Attached to this email is your official Joining Letter. Please review the details below:
+      </p>
+
+      <div style="background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 18px; margin: 20px 0;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+          <tr>
+            <td style="padding: 6px 0; color: #64748b; width: 40%;">Employee Code:</td>
+            <td style="padding: 6px 0; font-weight: 600; text-align: right; color: #0f172a;">${employee.employeeCode}</td>
+          </tr>
+          <tr>
+            <td style="padding: 6px 0; color: #64748b;">Designation:</td>
+            <td style="padding: 6px 0; font-weight: 600; text-align: right; color: #0f172a;">${employee.designation || 'Staff'}</td>
+          </tr>
+          <tr>
+            <td style="padding: 6px 0; color: #64748b;">Department:</td>
+            <td style="padding: 6px 0; font-weight: 600; text-align: right; color: #0f172a;">${employee.department || 'Operations'}</td>
+          </tr>
+          <tr>
+            <td style="padding: 6px 0; color: #64748b;">Employment Type:</td>
+            <td style="padding: 6px 0; font-weight: 600; text-align: right; color: #0f172a;">${employmentTypeLabel(employee.employmentType)}</td>
+          </tr>
+          <tr style="border-top: 1px solid #f1f5f9;">
+            <td style="padding: 8px 0 4px 0; color: #64748b;">Date of Joining:</td>
+            <td style="padding: 8px 0 4px 0; font-weight: 600; text-align: right; color: #2563eb;">${joiningDateFormatted}</td>
+          </tr>
+        </table>
+      </div>
+
+      <p style="font-size: 13px; color: #64748b; line-height: 1.6;">
+        Your formal joining letter is attached in PDF format. Please retain this document for your personal records.
+        If you have any questions or require assistance during your onboarding, please do not hesitate to contact HR.
+      </p>
+
+      <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #e2e8f0; font-size: 11px; color: #94a3b8; line-height: 1.5;">
+        <p style="margin: 0 0 4px 0; font-weight: 600; color: #64748b;">${company.name}</p>
+        <p style="margin: 0 0 6px 0;">${company.address || ''} ${company.email ? `&bull; ${company.email}` : ''}</p>
+        <p style="margin: 0; font-style: italic;">CONFIDENTIALITY NOTICE: This transmission is intended solely for the designated recipient. If you have received this message in error, please notify HR immediately.</p>
+      </div>
+    </div>
+  `;
+
+  const filename = `joining-letter-${employee.employeeCode}.pdf`;
+  const mailResult = await sendMail({
+    to: recipient,
+    subject: `Welcome to ${company.name || 'the team'} - Your Joining Letter (${employee.employeeCode})`,
+    html,
+    fromName: company.name,
+    replyTo: company.email || undefined,
+    companyId,
+    category: 'JOINING_LETTER',
+    attachments: [
+      {
+        filename,
+        content: pdfBuffer,
+        contentType: 'application/pdf',
+      },
+    ],
+  });
+
+  return {
+    success: true,
+    recipient,
+    previewUrl: mailResult.previewUrl,
+    isTestAccount: mailResult.isTestAccount,
+    employee: {
+      id: employee.id,
+      code: employee.employeeCode,
+      name: fullName,
+    },
+  };
+}

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { requireAuth, requireRole } from '../../middleware/auth';
+import { createEmailRateLimiter } from '../../middleware/rate-limit';
 import {
   createEmployee,
   listEmployees,
@@ -8,11 +9,19 @@ import {
   updateEmployee,
   deactivateEmployee,
   generateJoiningLetterPdf,
+  sendJoiningLetterEmail,
 } from './employee.service';
 
 export const employeeRouter = Router();
 
 employeeRouter.use(requireAuth);
+
+const joiningLetterEmailLimiter = createEmailRateLimiter({
+  windowSec: 60,
+  maxRequests: 15,
+  keyPrefix: 'email:joining-letter',
+  message: 'Joining letter email rate limit exceeded. Please wait a minute before sending more letters.',
+});
 
 const categoryEnum = z.enum([
   'HOUSEKEEPING',
@@ -128,6 +137,32 @@ employeeRouter.get('/:id/joining-letter/pdf', async (req, res) => {
     res.status(500).json({ error: 'Joining letter generation failed' });
   }
 });
+
+// SEND JOINING LETTER EMAIL — admin / HR
+employeeRouter.post('/:id/joining-letter/send-email', requireRole('ADMIN', 'HR'), joiningLetterEmailLimiter, async (req, res) => {
+  const emailSchema = z.object({
+    recipientEmail: z.string().email().optional(),
+  });
+  const parsed = emailSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+
+  try {
+    const result = await sendJoiningLetterEmail(
+      req.user!.companyId,
+      String(req.params.id),
+      parsed.data.recipientEmail,
+    );
+    res.json(result);
+  } catch (e: any) {
+    if (e.message === 'EMPLOYEE_NOT_FOUND')
+      return res.status(404).json({ error: 'Employee not found' });
+    if (e.message === 'RECIPIENT_EMAIL_REQUIRED')
+      return res.status(400).json({ error: 'Employee has no valid email address configured' });
+    console.error('[Joining Letter Email Error]:', e);
+    res.status(500).json({ error: 'Failed to send joining letter email', detail: e.message });
+  }
+});
+
 
 
 // SOFT DELETE — admin / HR only

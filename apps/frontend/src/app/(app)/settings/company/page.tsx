@@ -111,9 +111,9 @@ export default function CompanySettingsPage() {
       </div>
 
       {/* Logo card */}
-      <div className="bg-surface border border-subtle rounded-xl p-6">
-        <h2 className="font-medium text-fg mb-4">Company Logo</h2>
-        <div className="flex items-center gap-6">
+      <div className="bg-surface border border-subtle rounded-xl p-4 sm:p-6">
+        <h2 className="font-semibold text-fg mb-4">Company Logo</h2>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
           <div className="w-32 h-32 rounded-lg border border-subtle bg-app flex items-center justify-center overflow-hidden">
             {company.logoPath ? (
               <img
@@ -186,7 +186,7 @@ export default function CompanySettingsPage() {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field
               label="GSTIN"
               value={form.gstin ?? ''}
@@ -201,7 +201,7 @@ export default function CompanySettingsPage() {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field
               label="State code"
               value={form.stateCode ?? ''}
@@ -217,7 +217,7 @@ export default function CompanySettingsPage() {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field
               label="Billing email"
               type="email"
@@ -248,7 +248,7 @@ export default function CompanySettingsPage() {
             placeholder="HDFC Bank"
           />
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field
               label="Account number"
               value={form.bankAccount ?? ''}

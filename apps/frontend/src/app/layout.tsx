@@ -1,4 +1,4 @@
-﻿import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { QueryProvider } from '@/lib/query-provider';
@@ -9,9 +9,15 @@ import { ThemeProvider } from '@/lib/theme-provider';
 
 const inter = Inter({ subsets: ['latin'] });
 
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+};
+
 export const metadata: Metadata = {
-  title: 'Attendance System',
-  description: 'Biometric + face recognition attendance management',
+  title: 'StaffSync - Attendance, Payroll & Invoicing',
+  description: 'Production-grade staff management, manual attendance, automated payroll and client invoicing system',
 };
 
 export default function RootLayout({

@@ -9,7 +9,7 @@ export interface CreateClientInput {
   stateCode?: string;
 }
 
-export interface UpdateClientInput extends Partial<CreateClientInput> {}
+export interface UpdateClientInput extends Partial<CreateClientInput> { }
 
 export interface ClientRateInput {
   category: 'HOUSEKEEPING' | 'SEMI_SKILLED' | 'SECURITY_GUARD' | 'SUPERVISOR';

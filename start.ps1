@@ -1,4 +1,4 @@
-﻿# Attendance System - Startup Script
+# Attendance System - Startup Script
 # Usage: .\start.ps1
 
 $ErrorActionPreference = "Stop"
@@ -51,7 +51,6 @@ Write-Host "=====================================================" -ForegroundCo
 Write-Host "  Docker services running:" -ForegroundColor Cyan
 Write-Host "    Postgres:      localhost:55432" -ForegroundColor White
 Write-Host "    Redis:         localhost:6379" -ForegroundColor White
-Write-Host "    Face service:  http://localhost:5000" -ForegroundColor White
 Write-Host ""
 Write-Host "  Now open 2 more PowerShell windows and run:" -ForegroundColor Cyan
 Write-Host ""

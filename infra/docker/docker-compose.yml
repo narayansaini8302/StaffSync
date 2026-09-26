@@ -1,4 +1,4 @@
-﻿services:
+services:
   postgres:
     image: postgres:16-alpine
     container_name: attendance-postgres
@@ -31,27 +31,6 @@
       timeout: 3s
       retries: 5
 
-  face-service:
-    build:
-      context: ../../services/face-service
-      dockerfile: Dockerfile
-    container_name: attendance-face
-    restart: unless-stopped
-    ports:
-      - "5000:5000"
-    environment:
-      BACKEND_URL: http://host.docker.internal:4000
-      BACKEND_DEVICE_KEY: ""
-      MATCH_TOLERANCE: "0.55"
-      LIVENESS_ENABLED: "true"
-    volumes:
-      - face_embeddings:/app/faces
-      - deepface_cache:/root/.deepface
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-
 volumes:
   postgres_data:
   redis_data:
-  face_embeddings:
-  deepface_cache:

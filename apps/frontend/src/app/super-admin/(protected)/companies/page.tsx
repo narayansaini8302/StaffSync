@@ -36,21 +36,22 @@ export default function CompaniesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-100">Companies</h1>
-          <p className="text-sm text-slate-400 mt-1">
+          <h1 className="text-xl sm:text-2xl font-semibold text-slate-100">Companies</h1>
+          <p className="text-xs sm:text-sm text-slate-400 mt-1">
             Tenant companies using the platform
           </p>
         </div>
-        <Button onClick={() => setCreating(true)}>
+        <Button onClick={() => setCreating(true)} className="w-full sm:w-auto justify-center">
           <Plus size={16} />
           New Company
         </Button>
       </div>
 
-      <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-sm">
+        <div className="overflow-x-auto w-full">
+          <table className="w-full text-sm min-w-[620px]">
           <thead className="bg-slate-900/60 border-b border-slate-800">
             <tr className="text-slate-400 text-left">
               <th className="px-4 py-3 font-medium">Company</th>
@@ -135,6 +136,7 @@ export default function CompaniesPage() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
 
       <CreateCompanyModal

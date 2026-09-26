@@ -10,6 +10,8 @@ import {
   UserCheck,
   Loader2,
   Download,
+  Mail,
+  Send,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Employee, Paginated, CreateEmployeeInput } from '@/lib/types';
@@ -46,6 +48,7 @@ export default function EmployeesPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('active');
   const [editing, setEditing] = useState<Employee | null>(null);
   const [creating, setCreating] = useState(false);
+  const [emailingLetterEmp, setEmailingLetterEmp] = useState<Employee | null>(null);
 
   const query = useQuery({
     queryKey: ['employees', page, search, statusFilter],
@@ -98,14 +101,14 @@ export default function EmployeesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold text-fg">Employees</h1>
-          <p className="text-sm text-fg-2 mt-1">
-            {query.data?.meta.total ?? 0} total
+          <h1 className="text-xl sm:text-2xl font-semibold text-fg">Employees</h1>
+          <p className="text-xs sm:text-sm text-fg-2 mt-1">
+            {query.data?.meta.total ?? 0} total staff
           </p>
         </div>
-        <Button onClick={() => setCreating(true)}>
+        <Button onClick={() => setCreating(true)} className="w-full sm:w-auto justify-center">
           <Plus size={16} />
           Add Employee
         </Button>
@@ -160,8 +163,9 @@ export default function EmployeesPage() {
       </div>
 
       {/* Table */}
-      <div className="bg-surface border border-subtle rounded-xl overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="bg-surface border border-subtle rounded-xl overflow-hidden shadow-sm">
+        <div className="overflow-x-auto w-full">
+          <table className="w-full text-sm min-w-[700px]">
           <thead className="bg-elevated/50 border-b border-subtle">
             <tr className="text-fg-2 text-left">
               <th className="px-4 py-3 font-medium">Code</th>
@@ -234,6 +238,13 @@ export default function EmployeesPage() {
                       <Download size={14} />
                     </button>
                     <button
+                      onClick={() => setEmailingLetterEmp(emp)}
+                      className="p-1.5 rounded hover:bg-hover text-fg-2 hover:text-brand"
+                      title="Email joining letter"
+                    >
+                      <Mail size={14} />
+                    </button>
+                    <button
                       onClick={() => setEditing(emp)}
                       className="p-1.5 rounded hover:bg-hover text-fg-2 hover:text-brand"
                       title="Edit"
@@ -280,6 +291,7 @@ export default function EmployeesPage() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* Pagination */}
@@ -326,6 +338,11 @@ export default function EmployeesPage() {
           setEditing(null);
           qc.invalidateQueries({ queryKey: ['employees'] });
         }}
+      />
+
+      <SendJoiningLetterModal
+        employee={emailingLetterEmp}
+        onClose={() => setEmailingLetterEmp(null)}
       />
     </div>
   );
@@ -446,7 +463,7 @@ function EmployeeFormModal({
     >
       <form onSubmit={submit} className="space-y-4">
         {/* Row 1: Employee Code + Category */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field
             label="Employee code"
             value={form.employeeCode}
@@ -471,7 +488,7 @@ function EmployeeFormModal({
         </div>
 
         {/* Row 2: First + Last name */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field
             label="First name"
             value={form.firstName}
@@ -495,7 +512,7 @@ function EmployeeFormModal({
         />
 
         {/* Row 4: Email + Phone */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field
             label="Email"
             type="email"
@@ -526,7 +543,7 @@ function EmployeeFormModal({
         </div>
 
         {/* Row 6: Department + Designation */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field
             label="Department"
             value={form.department ?? ''}
@@ -540,7 +557,7 @@ function EmployeeFormModal({
         </div>
 
         {/* Row 7: Employment type + Joining date */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className="block text-xs text-fg-2 mb-1">Employment type</label>
             <select
@@ -639,3 +656,129 @@ function Field({
     </div>
   );
 }
+
+function SendJoiningLetterModal({
+  employee,
+  onClose,
+}: {
+  employee: Employee | null;
+  onClose: () => void;
+}) {
+  const [email, setEmail] = useState('');
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useState(() => {
+    if (employee) {
+      setEmail(employee.email || '');
+    }
+  });
+
+  if (!employee) return null;
+
+  const currentEmail = email || employee.email;
+
+  const handleSend = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentEmail || !currentEmail.includes('@')) {
+      setError('Please provide a valid email address');
+      return;
+    }
+    setSending(true);
+    setError(null);
+    try {
+      const res = await api.post<{
+        success: boolean;
+        recipient: string;
+        previewUrl?: string | false;
+      }>(`/api/employees/${employee.id}/joining-letter/send-email`, {
+        recipientEmail: currentEmail,
+      });
+
+      toast.success(`Joining letter sent to ${res.recipient}`);
+      if (res.previewUrl) {
+        console.log('[Ethereal Email Preview]:', res.previewUrl);
+      }
+      onClose();
+    } catch (err: any) {
+      setError(err?.message ?? 'Failed to send joining letter');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <Modal open={!!employee} onClose={onClose} title="Email Joining Letter">
+      <form onSubmit={handleSend} className="space-y-4">
+        <div className="bg-elevated/40 border border-subtle rounded-lg p-3 text-sm space-y-1">
+          <div className="flex justify-between">
+            <span className="text-fg-2">Employee:</span>
+            <span className="font-semibold text-fg">
+              {employee.firstName} {employee.lastName}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-fg-2">Employee Code:</span>
+            <span className="font-mono text-fg">{employee.employeeCode}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-fg-2">Designation / Role:</span>
+            <span className="text-fg">{employee.designation || 'Staff'} ({employee.department || 'General'})</span>
+          </div>
+          <div className="flex justify-between text-xs pt-1 border-t border-subtle">
+            <span className="text-muted">Date of Joining:</span>
+            <span className="text-fg-2 font-mono">
+              {new Date(employee.dateOfJoining).toLocaleDateString('en-IN', {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric',
+              })}
+            </span>
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-xs font-medium text-fg-2 mb-1">
+            Recipient Email Address <span className="text-danger">*</span>
+          </label>
+          <input
+            type="email"
+            required
+            value={email || employee.email || ''}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="name@example.com"
+            className="w-full px-3 py-2 rounded-lg bg-app border border-subtle text-fg text-sm focus:outline-none focus:border-brand"
+          />
+          <p className="text-xs text-muted mt-1">
+            An official welcome email with the signed joining letter attached as a PDF will be delivered.
+          </p>
+        </div>
+
+        {error && (
+          <div className="text-sm text-danger bg-danger-soft border border-danger/30 rounded-lg px-3 py-2">
+            {error}
+          </div>
+        )}
+
+        <div className="flex justify-end gap-2 pt-2">
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={onClose}
+            disabled={sending}
+          >
+            Cancel
+          </Button>
+          <Button type="submit" disabled={sending}>
+            {sending ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <Send size={14} />
+            )}
+            {sending ? 'Sending...' : 'Send Joining Letter'}
+          </Button>
+        </div>
+      </form>
+    </Modal>
+  );
+}

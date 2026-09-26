@@ -6,8 +6,6 @@ import { authRouter } from './modules/auth/auth.routes';
 import { employeeRouter } from './modules/employees/employee.routes';
 import { attendanceRouter } from './modules/attendance/attendance.routes';
 import { payrollRouter } from './modules/payroll/payroll.routes';
-import { deviceRouter } from './modules/devices/device.routes';
-import { faceRouter } from './modules/face/face.routes';
 import { superAdminAuthRouter } from './modules/super-admin/super-admin.auth.routes';
 import { superAdminRouter } from './modules/super-admin/super-admin.routes';
 import { clientRouter } from './modules/clients/client.routes';
@@ -56,8 +54,6 @@ export function createApp() {
   app.use('/api/employees', employeeRouter);
   app.use('/api/attendance', attendanceRouter);
   app.use('/api/payroll', payrollRouter);
-  app.use('/api/devices', deviceRouter);
-  app.use('/api/face', faceRouter);
 
   app.use(errorHandler);
 

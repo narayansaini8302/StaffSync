@@ -74,14 +74,14 @@ export default function AssignmentsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold text-fg">Assignments</h1>
-          <p className="text-sm text-fg-2 mt-1">
+          <h1 className="text-xl sm:text-2xl font-semibold text-fg">Assignments</h1>
+          <p className="text-xs sm:text-sm text-fg-2 mt-1">
             Which employees work for which clients
           </p>
         </div>
-        <Button onClick={() => setCreating(true)} disabled={clients.length === 0}>
+        <Button onClick={() => setCreating(true)} disabled={clients.length === 0} className="w-full sm:w-auto justify-center">
           <Plus size={16} />
           New Assignment
         </Button>
@@ -112,8 +112,9 @@ export default function AssignmentsPage() {
       </div>
 
       {/* Table */}
-      <div className="bg-surface border border-subtle rounded-xl overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="bg-surface border border-subtle rounded-xl overflow-hidden shadow-sm">
+        <div className="overflow-x-auto w-full">
+          <table className="w-full text-sm min-w-[650px]">
           <thead className="bg-elevated/50 border-b border-subtle">
             <tr className="text-fg-2 text-left">
               <th className="px-4 py-3 font-medium">Employee</th>
@@ -199,6 +200,7 @@ export default function AssignmentsPage() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
 
       <AssignmentFormModal
@@ -318,7 +320,7 @@ function AssignmentFormModal({
           </select>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className="block text-xs text-fg-2 mb-1">
               Start date <span className="text-danger">*</span>

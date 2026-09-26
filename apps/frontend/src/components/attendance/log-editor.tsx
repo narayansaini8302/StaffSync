@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState } from 'react';
 import { Loader2, AlertCircle } from 'lucide-react';
@@ -104,15 +104,15 @@ export function LogEditor({
             </div>
           )}
 
-          <div className="flex justify-between gap-2 pt-2">
-            <Button variant="danger" onClick={remove} disabled={saving}>
+          <div className="flex flex-col-reverse sm:flex-row justify-between gap-2 pt-2">
+            <Button variant="danger" onClick={remove} disabled={saving} className="w-full sm:w-auto">
               Delete
             </Button>
-            <div className="flex gap-2">
-              <Button variant="secondary" onClick={onClose} disabled={saving}>
+            <div className="flex gap-2 w-full sm:w-auto">
+              <Button variant="secondary" onClick={onClose} disabled={saving} className="flex-1 sm:flex-none">
                 Cancel
               </Button>
-              <Button onClick={save} disabled={saving}>
+              <Button onClick={save} disabled={saving} className="flex-1 sm:flex-none">
                 {saving ? <Loader2 size={14} className="animate-spin" /> : null}
                 Save
               </Button>

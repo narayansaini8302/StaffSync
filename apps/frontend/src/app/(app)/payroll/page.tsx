@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -11,11 +11,14 @@ import {
   Download,
   CheckCircle2,
   Clock,
+  Mail,
+  Send,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { PayrollRun, Payslip } from '@/lib/types';
 import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
+import { toast } from '@/lib/toast';
 
 function monthLabel(iso: string) {
   const d = new Date(iso);
@@ -46,14 +49,14 @@ export default function PayrollPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold text-fg">Payroll</h1>
-          <p className="text-sm text-fg-2 mt-1">
+          <h1 className="text-xl sm:text-2xl font-semibold text-fg">Payroll</h1>
+          <p className="text-xs sm:text-sm text-fg-2 mt-1">
             Monthly salary runs and payslips
           </p>
         </div>
-        <Button onClick={() => setCreating(true)}>
+        <Button onClick={() => setCreating(true)} className="w-full sm:w-auto justify-center">
           <Play size={16} />
           Run Payroll
         </Button>
@@ -74,8 +77,9 @@ export default function PayrollPage() {
         />
       </div>
 
-      <div className="bg-surface border border-subtle rounded-xl overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="bg-surface border border-subtle rounded-xl overflow-hidden shadow-sm">
+        <div className="overflow-x-auto w-full">
+          <table className="w-full text-sm min-w-[620px]">
           <thead className="bg-elevated/50 border-b border-subtle">
             <tr className="text-fg-2 text-left">
               <th className="px-4 py-3 font-medium">Period</th>
@@ -130,6 +134,7 @@ export default function PayrollPage() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
 
       <CreateRunModal
@@ -164,9 +169,8 @@ function Stat({
         <Icon size={16} className="text-muted" />
       </div>
       <div
-        className={`text-2xl font-semibold mt-2 ${
-          highlight ? 'text-success' : 'text-fg'
-        }`}
+        className={`text-2xl font-semibold mt-2 ${highlight ? 'text-success' : 'text-fg'
+          }`}
       >
         {value}
       </div>
@@ -291,6 +295,7 @@ function RunDetailsModal({
   run: PayrollRun | null;
   onClose: () => void;
 }) {
+  const qc = useQueryClient();
   const query = useQuery({
     queryKey: ['payroll-run', run?.id],
     enabled: !!run,
@@ -301,6 +306,8 @@ function RunDetailsModal({
   });
 
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [emailingSlip, setEmailingSlip] = useState<Payslip | null>(null);
+  const [sendingAll, setSendingAll] = useState(false);
 
   const downloadPdf = async (slip: Payslip) => {
     setDownloadingId(slip.id);
@@ -314,111 +321,310 @@ function RunDetailsModal({
       a.download = `payslip-${slip.employeeCode}.pdf`;
       a.click();
       URL.revokeObjectURL(url);
-    } catch (e) {
-      alert('Download failed');
+      toast.success(`Payslip downloaded for ${slip.employeeName}`);
+    } catch (e: any) {
+      toast.error('Download failed', e?.message);
     } finally {
       setDownloadingId(null);
     }
   };
 
-  return (
-    <Modal
-      open={!!run}
-      onClose={onClose}
-      title={run ? `Payroll - ${monthLabel(run.periodStart)}` : ''}
-      maxWidth="max-w-4xl"
-    >
-      {!run ? null : (
-        <div className="space-y-4">
-          <div className="flex gap-6 text-sm">
-            <div>
-              <span className="text-fg-2">Employees: </span>
-              <span className="font-mono text-fg">{run.totalEmployees}</span>
-            </div>
-            <div>
-              <span className="text-fg-2">Total Gross: </span>
-              <span className="font-mono text-fg">
-                {formatMoney(run.totalGross)}
-              </span>
-            </div>
-            <div>
-              <span className="text-fg-2">Total Net: </span>
-              <span className="font-mono text-success">
-                {formatMoney(run.totalNet)}
-              </span>
-            </div>
-          </div>
+  const emailAllPayslips = async () => {
+    if (!run) return;
+    if (!confirm(`Send payslip emails to all ${run.totalEmployees} employees in this run?`)) return;
 
-          <div className="border border-subtle rounded-lg overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="bg-elevated/50 border-b border-subtle">
-                <tr className="text-fg-2 text-left">
-                  <th className="px-3 py-2 font-medium">Employee</th>
-                  <th className="px-3 py-2 font-medium text-right">Days</th>
-                  <th className="px-3 py-2 font-medium text-right">Gross</th>
-                  <th className="px-3 py-2 font-medium text-right">
-                    Deductions
-                  </th>
-                  <th className="px-3 py-2 font-medium text-right">Net</th>
-                  <th className="px-3 py-2 font-medium text-right">PDF</th>
-                </tr>
-              </thead>
-              <tbody>
-                {query.isLoading && (
-                  <tr>
-                                      <td
-                      colSpan={6}
-                      className="px-3 py-8 text-center text-muted"
-                    >
-                      <Loader2 size={18} className="inline animate-spin" />{' '}
-                      Loading...
-                    </td>
-                  </tr>
+    setSendingAll(true);
+    try {
+      const res = await api.post<{ total: number; sent: number; failed: number }>(
+        `/api/payroll/runs/${run.id}/send-emails`,
+        {},
+      );
+      toast.success(`Sent ${res.sent} of ${res.total} payslips via email`);
+      qc.invalidateQueries({ queryKey: ['payroll-run', run.id] });
+    } catch (e: any) {
+      toast.error('Bulk email failed', e?.message);
+    } finally {
+      setSendingAll(false);
+    }
+  };
+
+  return (
+    <>
+      <Modal
+        open={!!run}
+        onClose={onClose}
+        title={run ? `Payroll - ${monthLabel(run.periodStart)}` : ''}
+        maxWidth="max-w-5xl"
+      >
+        {!run ? null : (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between flex-wrap gap-4 pb-2 border-b border-subtle">
+              <div className="flex gap-6 text-sm">
+                <div>
+                  <span className="text-fg-2">Employees: </span>
+                  <span className="font-mono text-fg">{run.totalEmployees}</span>
+                </div>
+                <div>
+                  <span className="text-fg-2">Total Gross: </span>
+                  <span className="font-mono text-fg">
+                    {formatMoney(run.totalGross)}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-fg-2">Total Net: </span>
+                  <span className="font-mono text-success">
+                    {formatMoney(run.totalNet)}
+                  </span>
+                </div>
+              </div>
+
+              <Button
+                size="sm"
+                variant="secondary"
+                disabled={sendingAll || query.isLoading}
+                onClick={emailAllPayslips}
+              >
+                {sendingAll ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : (
+                  <Send size={14} />
                 )}
-                {query.data?.payslips.map((slip) => (
-                  <tr
-                    key={slip.id}
-                    className="border-b border-subtle last:border-0"
-                  >
-                    <td className="px-3 py-2 text-fg">
-                      {slip.employeeName}
-                      <span className="ml-2 text-xs text-muted">
-                        {slip.employeeCode}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2 text-right text-fg">
-                      {Number(slip.presentDays)}
-                    </td>
-                    <td className="px-3 py-2 text-right font-mono text-fg">
-                      {formatMoney(slip.grossPay)}
-                    </td>
-                    <td className="px-3 py-2 text-right font-mono text-danger">
-                      -{formatMoney(slip.totalDeductions)}
-                    </td>
-                    <td className="px-3 py-2 text-right font-mono text-success">
-                      {formatMoney(slip.netPay)}
-                    </td>
-                    <td className="px-3 py-2 text-right">
-                      <button
-                        onClick={() => downloadPdf(slip)}
-                        disabled={downloadingId === slip.id}
-                        className="p-1.5 rounded hover:bg-hover text-fg-2 hover:text-brand disabled:opacity-50"
-                        title="Download PDF"
-                      >
-                        {downloadingId === slip.id ? (
-                          <Loader2 size={14} className="animate-spin" />
-                        ) : (
-                          <Download size={14} />
-                        )}
-                      </button>
-                    </td>
+                {sendingAll ? 'Sending All...' : 'Email All Payslips'}
+              </Button>
+            </div>
+
+            <div className="border border-subtle rounded-lg overflow-hidden">
+              <div className="overflow-x-auto w-full">
+                <table className="w-full text-sm min-w-[680px]">
+                <thead className="bg-elevated/50 border-b border-subtle">
+                  <tr className="text-fg-2 text-left">
+                    <th className="px-3 py-2 font-medium">Employee</th>
+                    <th className="px-3 py-2 font-medium text-right">Days</th>
+                    <th className="px-3 py-2 font-medium text-right">Gross</th>
+                    <th className="px-3 py-2 font-medium text-right">Deductions</th>
+                    <th className="px-3 py-2 font-medium text-right">Net</th>
+                    <th className="px-3 py-2 font-medium">Email Status</th>
+                    <th className="px-3 py-2 font-medium text-right">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {query.isLoading && (
+                    <tr>
+                      <td
+                        colSpan={7}
+                        className="px-3 py-8 text-center text-muted"
+                      >
+                        <Loader2 size={18} className="inline animate-spin" />{' '}
+                        Loading payslips...
+                      </td>
+                    </tr>
+                  )}
+                  {query.data?.payslips.map((slip) => (
+                    <tr
+                      key={slip.id}
+                      className="border-b border-subtle last:border-0 hover:bg-hover/50"
+                    >
+                      <td className="px-3 py-2 text-fg">
+                        <div className="font-medium">{slip.employeeName}</div>
+                        <div className="text-xs text-muted flex items-center gap-1.5 mt-0.5">
+                          <span>{slip.employeeCode}</span>
+                          <span>&bull;</span>
+                          <span>{slip.email || 'No email configured'}</span>
+                        </div>
+                      </td>
+                      <td className="px-3 py-2 text-right text-fg">
+                        {Number(slip.presentDays)}
+                      </td>
+                      <td className="px-3 py-2 text-right font-mono text-fg">
+                        {formatMoney(slip.grossPay)}
+                      </td>
+                      <td className="px-3 py-2 text-right font-mono text-danger">
+                        -{formatMoney(slip.totalDeductions)}
+                      </td>
+                      <td className="px-3 py-2 text-right font-mono text-success font-medium">
+                        {formatMoney(slip.netPay)}
+                      </td>
+                      <td className="px-3 py-2">
+                        {slip.emailedAt ? (
+                          <span
+                            className="inline-flex items-center gap-1 text-[11px] text-success font-medium bg-success-soft px-2 py-0.5 rounded-full border border-success/30"
+                            title={`Sent: ${new Date(slip.emailedAt).toLocaleString()}`}
+                          >
+                            <CheckCircle2 size={11} /> Sent
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center text-[11px] text-muted bg-elevated px-2 py-0.5 rounded-full border border-subtle">
+                            Not sent
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2 text-right">
+                        <div className="inline-flex items-center gap-1">
+                          <button
+                            onClick={() => setEmailingSlip(slip)}
+                            className="p-1.5 rounded hover:bg-hover text-fg-2 hover:text-brand"
+                            title="Send payslip email"
+                          >
+                            <Mail size={15} />
+                          </button>
+                          <button
+                            onClick={() => downloadPdf(slip)}
+                            disabled={downloadingId === slip.id}
+                            className="p-1.5 rounded hover:bg-hover text-fg-2 hover:text-brand disabled:opacity-50"
+                            title="Download PDF"
+                          >
+                            {downloadingId === slip.id ? (
+                              <Loader2 size={15} className="animate-spin" />
+                            ) : (
+                              <Download size={15} />
+                            )}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              </div>
+            </div>
           </div>
+        )}
+      </Modal>
+
+      <SendPayslipModal
+        slip={emailingSlip}
+        onClose={() => setEmailingSlip(null)}
+        onSent={() => {
+          setEmailingSlip(null);
+          if (run) {
+            qc.invalidateQueries({ queryKey: ['payroll-run', run.id] });
+          }
+        }}
+      />
+    </>
+  );
+}
+
+function SendPayslipModal({
+  slip,
+  onClose,
+  onSent,
+}: {
+  slip: Payslip | null;
+  onClose: () => void;
+  onSent: () => void;
+}) {
+  const [email, setEmail] = useState('');
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Sync email when modal opens with new slip
+  useState(() => {
+    if (slip) {
+      setEmail(slip.email || '');
+    }
+  });
+
+  if (!slip) return null;
+
+  const currentEmail = email || slip.email;
+
+  const handleSend = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentEmail || !currentEmail.includes('@')) {
+      setError('Please provide a valid email address');
+      return;
+    }
+    setSending(true);
+    setError(null);
+    try {
+      const res = await api.post<{
+        success: boolean;
+        recipient: string;
+        previewUrl?: string | false;
+      }>(`/api/payroll/payslips/${slip.id}/send-email`, {
+        recipientEmail: currentEmail,
+      });
+
+      toast.success(`Payslip sent to ${res.recipient}`);
+      if (res.previewUrl) {
+        console.log('[Ethereal Email Preview]:', res.previewUrl);
+      }
+      onSent();
+    } catch (err: any) {
+      setError(err?.message ?? 'Failed to send payslip email');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <Modal open={!!slip} onClose={onClose} title="Send Payslip Email">
+      <form onSubmit={handleSend} className="space-y-4">
+        <div className="bg-elevated/40 border border-subtle rounded-lg p-3 text-sm space-y-1">
+          <div className="flex justify-between">
+            <span className="text-fg-2">Employee:</span>
+            <span className="font-semibold text-fg">
+              {slip.employeeName} ({slip.employeeCode})
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-fg-2">Net Salary:</span>
+            <span className="font-mono font-semibold text-success">
+              {formatMoney(slip.netPay)}
+            </span>
+          </div>
+          {slip.emailedAt && (
+            <div className="flex justify-between text-xs pt-1 border-t border-subtle">
+              <span className="text-muted">Last sent:</span>
+              <span className="text-muted">{new Date(slip.emailedAt).toLocaleString()}</span>
+            </div>
+          )}
         </div>
-      )}
+
+        <div>
+          <label className="block text-xs font-medium text-fg-2 mb-1">
+            Recipient Email Address <span className="text-danger">*</span>
+          </label>
+          <input
+            type="email"
+            required
+            value={email || slip.email || ''}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="employee@example.com"
+            className="w-full px-3 py-2 rounded-lg bg-app border border-subtle text-fg text-sm focus:outline-none focus:border-brand"
+          />
+          <p className="text-xs text-muted mt-1">
+            The official salary payslip PDF and details will be sent as an attachment.
+          </p>
+        </div>
+
+        {error && (
+          <div className="text-sm text-danger bg-danger-soft border border-danger/30 rounded-lg px-3 py-2">
+            {error}
+          </div>
+        )}
+
+        <div className="flex justify-end gap-2 pt-2">
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={onClose}
+            disabled={sending}
+          >
+            Cancel
+          </Button>
+          <Button type="submit" disabled={sending}>
+            {sending ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <Send size={14} />
+            )}
+            {sending ? 'Sending...' : 'Send Payslip'}
+          </Button>
+        </div>
+      </form>
     </Modal>
   );
 }
+

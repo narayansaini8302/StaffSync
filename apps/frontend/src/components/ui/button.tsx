@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { ButtonHTMLAttributes } from 'react';
 
@@ -32,7 +32,7 @@ export function Button({
   return (
     <button
       {...rest}
-      className={`inline-flex items-center justify-center gap-2 rounded-lg font-medium transition disabled:opacity-50 disabled:cursor-not-allowed ${styles[variant]} ${sizes[size]} ${className}`}
+      className={`inline-flex items-center justify-center gap-2 rounded-lg font-medium transition touch-manipulation select-none active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed ${styles[variant]} ${sizes[size]} ${className}`}
     >
       {children}
     </button>

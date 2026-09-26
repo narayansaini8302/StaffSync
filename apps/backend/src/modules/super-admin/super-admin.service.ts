@@ -105,12 +105,18 @@ export async function getCompanyById(id: string) {
         orderBy: { createdAt: 'asc' },
       },
       _count: {
-        select: { employees: true, devices: true, payrollRuns: true },
+        select: { employees: true, clients: true, payrollRuns: true },
       },
     },
   });
   if (!company) throw new Error('COMPANY_NOT_FOUND');
-  return company;
+  return {
+    ...company,
+    _count: {
+      ...company._count,
+      devices: 0,
+    },
+  };
 }
 
 export async function updateCompany(
@@ -195,12 +201,12 @@ export async function deleteUser(userId: string) {
 // ===========================================================================
 
 export async function getGlobalStats() {
-  const [companies, activeCompanies, users, employees, devices] = await Promise.all([
+  const [companies, activeCompanies, users, employees, invoices] = await Promise.all([
     prisma.company.count(),
     prisma.company.count({ where: { isActive: true } }),
     prisma.user.count(),
     prisma.employee.count(),
-    prisma.device.count(),
+    prisma.taxInvoice.count(),
   ]);
 
   return {
@@ -208,6 +214,7 @@ export async function getGlobalStats() {
     activeCompanies,
     users,
     employees,
-    devices,
+    devices: 0,
+    invoices,
   };
 }
