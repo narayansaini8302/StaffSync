@@ -31,9 +31,23 @@ export async function getTransporter(): Promise<Transporter> {
       process.env.SMTP_HOST?.includes('gmail') ||
       process.env.SMTP_USER?.includes('@gmail.com');
 
-    const host = isGmail ? 'smtp.gmail.com' : (process.env.SMTP_HOST || 'smtp.gmail.com');
+    const rawHost = isGmail ? 'smtp.gmail.com' : (process.env.SMTP_HOST || 'smtp.gmail.com');
     const port = Number(process.env.SMTP_PORT ?? (isGmail ? 465 : 587));
-    const secure = process.env.SMTP_SECURE === 'true' || port === 465;
+    const secure = process.env.SMTP_SECURE !== undefined
+      ? process.env.SMTP_SECURE === 'true'
+      : port === 465;
+
+    // Resolve IPv4 address directly using OS resolver (dns.promises.lookup)
+    // This completely bypasses Nodemailer's internal random IPv6 selection that causes ENETUNREACH on platforms without IPv6 routing (Render)
+    let host = rawHost;
+    try {
+      const { address } = await dns.promises.lookup(rawHost, { family: 4 });
+      if (address) {
+        host = address;
+      }
+    } catch (err) {
+      console.warn(`[Email] Could not resolve IPv4 for ${rawHost}, using raw host:`, err);
+    }
 
     transporter = nodemailer.createTransport({
       host,
@@ -44,16 +58,16 @@ export async function getTransporter(): Promise<Transporter> {
         pass: process.env.SMTP_PASS,
       },
       tls: {
+        servername: rawHost,
         rejectUnauthorized: false,
       },
-      lookup: (hostname: string, _options: any, callback: any) => {
-        return dns.lookup(hostname, { family: 4 }, callback);
-      },
-      family: 4,
+      connectionTimeout: 15000,
+      greetingTimeout: 15000,
+      socketTimeout: 20000,
     } as any);
 
     console.log(
-      `[Email] Using configured SMTP server: ${host}:${port} (user: ${process.env.SMTP_USER}, strict IPv4)`,
+      `[Email] Configured SMTP: ${rawHost} (${host}):${port} (secure: ${secure}, user: ${process.env.SMTP_USER})`,
     );
   } else {
     try {
@@ -103,7 +117,6 @@ export async function sendMail(
   input: SendMailInput,
   retries = 2,
 ): Promise<SendMailResult> {
-  const t = await getTransporter();
   const fromName = input.fromName || process.env.EMAIL_FROM_NAME || process.env.COMPANY_NAME || 'StaffSync';
   const fromEmail = isRealSmtpConfigured()
     ? (process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@staffsync.local')
@@ -130,6 +143,7 @@ export async function sendMail(
   let attempt = 0;
   while (attempt <= retries) {
     try {
+      const t = await getTransporter();
       const info = await t.sendMail(mailOptions);
 
       let previewUrl: string | false = false;
@@ -147,6 +161,7 @@ export async function sendMail(
       };
     } catch (err: any) {
       attempt++;
+      transporter = null; // Invalidate cached transporter so retry re-resolves
       if (attempt > retries) {
         console.error(`[Email] Failed to send email to ${input.to} after ${retries + 1} attempts:`, err);
         throw err;
