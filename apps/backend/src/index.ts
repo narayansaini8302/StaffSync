@@ -1,4 +1,11 @@
-﻿import { createApp } from './app';
+import dns from 'dns';
+if (dns.setDefaultResultOrder) {
+  try {
+    dns.setDefaultResultOrder('ipv4first');
+  } catch {}
+}
+
+import { createApp } from './app';
 import { env } from './config/env';
 import { logger } from './utils/logger';
 import { prisma } from './config/prisma';

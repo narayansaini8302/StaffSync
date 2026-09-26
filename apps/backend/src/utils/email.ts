@@ -1,4 +1,11 @@
 import nodemailer, { Transporter } from 'nodemailer';
+import dns from 'dns';
+
+if (dns.setDefaultResultOrder) {
+  try {
+    dns.setDefaultResultOrder('ipv4first');
+  } catch {}
+}
 
 let transporter: Transporter | null = null;
 let etherealUser: string | null = null;
@@ -24,11 +31,12 @@ export async function getTransporter(): Promise<Transporter> {
       process.env.SMTP_HOST?.includes('gmail') ||
       process.env.SMTP_USER?.includes('@gmail.com');
 
+    const host = isGmail ? 'smtp.gmail.com' : (process.env.SMTP_HOST || 'smtp.gmail.com');
     const port = Number(process.env.SMTP_PORT ?? (isGmail ? 465 : 587));
     const secure = process.env.SMTP_SECURE === 'true' || port === 465;
 
     transporter = nodemailer.createTransport({
-      ...(isGmail ? { service: 'gmail' } : { host: process.env.SMTP_HOST }),
+      host,
       port,
       secure,
       auth: {
@@ -38,11 +46,14 @@ export async function getTransporter(): Promise<Transporter> {
       tls: {
         rejectUnauthorized: false,
       },
-      family: 4, // Force IPv4 to prevent ENETUNREACH on Render/Cloud hosts
+      lookup: (hostname: string, _options: any, callback: any) => {
+        return dns.lookup(hostname, { family: 4 }, callback);
+      },
+      family: 4,
     } as any);
 
     console.log(
-      `[Email] Using configured SMTP server: ${isGmail ? 'Gmail' : process.env.SMTP_HOST} (user: ${process.env.SMTP_USER}, IPv4 forced)`,
+      `[Email] Using configured SMTP server: ${host}:${port} (user: ${process.env.SMTP_USER}, strict IPv4)`,
     );
   } else {
     try {
