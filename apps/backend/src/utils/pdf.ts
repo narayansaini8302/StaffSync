@@ -28,7 +28,7 @@ function releaseRenderSlot(): void {
 
 async function getBrowser(): Promise<Browser> {
   if (!browser || !browser.connected) {
-    browser = await puppeteer.launch({
+    const launchOptions: any = {
       headless: true,
       args: [
         '--no-sandbox',
@@ -40,7 +40,13 @@ async function getBrowser(): Promise<Browser> {
         '--disable-gpu',
       ],
       timeout: 30000,
-    });
+    };
+
+    if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+      launchOptions.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+    }
+
+    browser = await puppeteer.launch(launchOptions);
   }
   return browser;
 }

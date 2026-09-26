@@ -4,10 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
-    "build": "prisma generate && tsc && node scripts/copy-templates.js",
+    "build": "prisma generate && tsc && node scripts/copy-templates.js && npx puppeteer browsers install chrome",
     "build:backend": "npm run build",
     "start": "npx prisma db push --skip-generate && npm run seed && node dist/index.js",
-    "postinstall": "prisma generate",
+    "postinstall": "prisma generate && npx puppeteer browsers install chrome",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
