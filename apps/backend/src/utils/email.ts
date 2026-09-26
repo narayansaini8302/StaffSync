@@ -11,6 +11,9 @@ let transporter: Transporter | null = null;
 let etherealUser: string | null = null;
 
 export function isRealSmtpConfigured(): boolean {
+  if (process.env.RESEND_API_KEY || process.env.BREVO_API_KEY) {
+    return true;
+  }
   const host = process.env.SMTP_HOST;
   const user = process.env.SMTP_USER;
   const pass = process.env.SMTP_PASS;
@@ -113,6 +116,105 @@ export interface SendMailResult {
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+async function sendViaResend(
+  input: SendMailInput,
+  fromName: string,
+  fromEmail: string,
+): Promise<SendMailResult> {
+  const apiKey = process.env.RESEND_API_KEY!;
+  const sender =
+    process.env.RESEND_FROM ||
+    (fromEmail && !fromEmail.includes('@gmail.com') && !fromEmail.includes('@staffsync.local')
+      ? `"${fromName}" <${fromEmail}>`
+      : 'StaffSync <onboarding@resend.dev>');
+
+  const payload: any = {
+    from: sender,
+    to: [input.to],
+    subject: input.subject,
+    html: input.html,
+  };
+
+  if (input.replyTo || (fromEmail && fromEmail !== 'noreply@staffsync.local')) {
+    payload.reply_to = input.replyTo || fromEmail;
+  }
+
+  if (input.attachments && input.attachments.length > 0) {
+    payload.attachments = input.attachments.map((att) => ({
+      filename: att.filename,
+      content: att.content.toString('base64'),
+    }));
+  }
+
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const data: any = await res.json();
+  if (!res.ok) {
+    throw new Error(data?.message || JSON.stringify(data));
+  }
+
+  return {
+    messageId: data.id,
+    previewUrl: false,
+    isTestAccount: false,
+  };
+}
+
+async function sendViaBrevo(
+  input: SendMailInput,
+  fromName: string,
+  fromEmail: string,
+): Promise<SendMailResult> {
+  const apiKey = process.env.BREVO_API_KEY!;
+  const senderEmail = process.env.BREVO_FROM || process.env.SMTP_USER || fromEmail;
+
+  const payload: any = {
+    sender: { name: fromName, email: senderEmail },
+    to: [{ email: input.to }],
+    subject: input.subject,
+    htmlContent: input.html,
+  };
+
+  if (input.replyTo) {
+    payload.replyTo = { email: input.replyTo };
+  }
+
+  if (input.attachments && input.attachments.length > 0) {
+    payload.attachment = input.attachments.map((att) => ({
+      name: att.filename,
+      content: att.content.toString('base64'),
+    }));
+  }
+
+  const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: {
+      'api-key': apiKey,
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const data: any = await res.json();
+  if (!res.ok) {
+    throw new Error(data?.message || JSON.stringify(data));
+  }
+
+  return {
+    messageId: data.messageId || data.id,
+    previewUrl: false,
+    isTestAccount: false,
+  };
+}
+
 export async function sendMail(
   input: SendMailInput,
   retries = 2,
@@ -122,6 +224,28 @@ export async function sendMail(
     ? (process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@staffsync.local')
     : 'noreply@staffsync.local';
 
+  // 1. Direct HTTPS API delivery (bypasses Render SMTP port 25/465/587 blocks)
+  if (process.env.RESEND_API_KEY) {
+    try {
+      console.log(`[Email] Dispatching via Resend HTTPS API to ${input.to}`);
+      return await sendViaResend(input, fromName, fromEmail);
+    } catch (err: any) {
+      console.error('[Email] Resend API error:', err);
+      throw err;
+    }
+  }
+
+  if (process.env.BREVO_API_KEY) {
+    try {
+      console.log(`[Email] Dispatching via Brevo HTTPS API to ${input.to}`);
+      return await sendViaBrevo(input, fromName, fromEmail);
+    } catch (err: any) {
+      console.error('[Email] Brevo API error:', err);
+      throw err;
+    }
+  }
+
+  // 2. Standard SMTP delivery (with strict IPv4 resolution)
   const mailOptions: any = {
     from: `"${fromName}" <${fromEmail}>`,
     to: input.to,
