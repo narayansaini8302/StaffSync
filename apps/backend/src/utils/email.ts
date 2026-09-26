@@ -20,20 +20,30 @@ export async function getTransporter(): Promise<Transporter> {
   if (transporter) return transporter;
 
   if (isRealSmtpConfigured()) {
+    const isGmail =
+      process.env.SMTP_HOST?.includes('gmail') ||
+      process.env.SMTP_USER?.includes('@gmail.com');
+
+    const port = Number(process.env.SMTP_PORT ?? (isGmail ? 465 : 587));
+    const secure = process.env.SMTP_SECURE === 'true' || port === 465;
+
     transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: Number(process.env.SMTP_PORT ?? 587),
-      secure: process.env.SMTP_SECURE === 'true',
+      ...(isGmail ? { service: 'gmail' } : { host: process.env.SMTP_HOST }),
+      port,
+      secure,
       auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
       },
       tls: {
-        // Do not fail on invalid certs in development
-        rejectUnauthorized: process.env.NODE_ENV === 'production',
+        rejectUnauthorized: false,
       },
-    });
-    console.log(`[Email] Using configured SMTP server: ${process.env.SMTP_HOST} (user: ${process.env.SMTP_USER})`);
+      family: 4, // Force IPv4 to prevent ENETUNREACH on Render/Cloud hosts
+    } as any);
+
+    console.log(
+      `[Email] Using configured SMTP server: ${isGmail ? 'Gmail' : process.env.SMTP_HOST} (user: ${process.env.SMTP_USER}, IPv4 forced)`,
+    );
   } else {
     try {
       const test = await nodemailer.createTestAccount();
