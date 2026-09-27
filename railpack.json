@@ -3,5 +3,8 @@
   "buildAptPackages": [
     "...",
     "unzip"
-  ]
+  ],
+  "deploy": {
+    "startCommand": "npm run start:backend"
+  }
 }

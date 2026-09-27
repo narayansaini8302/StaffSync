@@ -17,8 +17,8 @@ async function main() {
   await prisma.$connect();
   logger.info('✅ PostgreSQL connected');
 
-  const server = app.listen(env.PORT, () => {
-    logger.info(`🚀 Backend listening on http://localhost:${env.PORT}`);
+  const server = app.listen(env.PORT, '0.0.0.0', () => {
+    logger.info(`🚀 Backend listening on http://0.0.0.0:${env.PORT}`);
   });
 
   const shutdown = async () => {

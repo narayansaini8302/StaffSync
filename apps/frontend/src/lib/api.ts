@@ -1,6 +1,6 @@
-﻿'use client';
+'use client';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000').replace(/\/+$/, '');
 
 export interface ApiError {
   status: number;
@@ -72,7 +72,8 @@ class ApiClient {
     const token = this.getToken();
     if (token) headers['Authorization'] = `Bearer ${token}`;
 
-    const res = await fetch(`${API_URL}${path}`, { ...options, headers });
+    const cleanPath = path.startsWith('/') ? path : `/${path}`;
+    const res = await fetch(`${API_URL}${cleanPath}`, { ...options, headers });
 
     // Auto-refresh on 401 and retry once
     if (res.status === 401 && retry) {

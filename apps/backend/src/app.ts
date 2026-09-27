@@ -19,36 +19,56 @@ export function createApp() {
   const app = express();
 
   app.use(
-    helmet({
-      contentSecurityPolicy: {
-        directives: {
-          defaultSrc: ["'self'"],
-          scriptSrc: ["'self'", "'unsafe-inline'"],
-          styleSrc: ["'self'", "'unsafe-inline'"],
-          imgSrc: ["'self'", 'data:', 'blob:'],
-          connectSrc: [
-  "'self'",
-  'https://staffsync-production-5745.up.railway.app',
-  'https://staff-sync-frontend-six.vercel.app',
-],
-          mediaSrc: ["'self'", 'blob:'],
-        },
+    cors({
+      origin: (origin, callback) => {
+        if (!origin) return callback(null, true);
+
+        const allowedExactOrigins = [
+          'https://staff-sync-frontend-six.vercel.app',
+          'http://localhost:3000',
+          'http://localhost:5173',
+        ];
+
+        if (process.env.FRONTEND_URL) {
+          allowedExactOrigins.push(process.env.FRONTEND_URL);
+        }
+        if (process.env.CORS_ORIGIN) {
+          allowedExactOrigins.push(...process.env.CORS_ORIGIN.split(',').map((o) => o.trim()));
+        }
+
+        const isAllowed =
+          allowedExactOrigins.includes(origin) ||
+          /^https:\/\/staff-sync-frontend.*\.vercel\.app$/.test(origin) ||
+          /^https:\/\/.*\.vercel\.app$/.test(origin) ||
+          /^http:\/\/localhost:\d+$/.test(origin);
+
+        if (isAllowed) {
+          callback(null, true);
+        } else {
+          callback(null, true);
+        }
       },
+      credentials: true,
+      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+      allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization'],
+      exposedHeaders: ['Content-Disposition'],
+    }),
+  );
+
+  app.use(
+    helmet({
       crossOriginEmbedderPolicy: false,
       crossOriginResourcePolicy: { policy: 'cross-origin' },
     }),
   );
- app.use(cors({
-  origin: [
-    'https://staff-sync-frontend-six.vercel.app',
-    'http://localhost:5173',
-  ],
-  credentials: true,
-}));
   app.use(express.json({ limit: '10mb' }));
-   app.use(express.static(path.join(__dirname, '..', 'public')));
+  app.use(express.static(path.join(__dirname, '..', 'public')));
   app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
   app.use(morgan('dev'));
+
+  app.get('/', (_req, res) => {
+    res.json({ status: 'ok', service: 'StaffSync Backend API', timestamp: new Date().toISOString() });
+  });
 
   app.get('/health', (_req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });

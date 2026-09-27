@@ -1,6 +1,6 @@
 'use client';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000').replace(/\/+$/, '');
 const TOKEN_KEY = 'sa_accessToken';
 
 class SuperAdminApi {
@@ -29,7 +29,8 @@ class SuperAdminApi {
     const token = this.getToken();
     if (token) headers['Authorization'] = `Bearer ${token}`;
 
-    const res = await fetch(`${API_URL}${path}`, { ...options, headers });
+    const cleanPath = path.startsWith('/') ? path : `/${path}`;
+    const res = await fetch(`${API_URL}${cleanPath}`, { ...options, headers });
 
     if (res.status === 401) {
       this.clearToken();
