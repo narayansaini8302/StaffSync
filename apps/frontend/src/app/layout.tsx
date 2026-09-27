@@ -6,6 +6,7 @@ import { AuthHydrator } from '@/lib/auth-hydrator';
 import { ToastHost } from '@/lib/toast';
 import { ErrorBoundary } from '@/lib/error-boundary';
 import { ThemeProvider } from '@/lib/theme-provider';
+import { Analytics } from '@vercel/analytics/next';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -35,6 +36,7 @@ export default function RootLayout({
             </ErrorBoundary>
           </QueryProvider>
         </ThemeProvider>
+        <Analytics />
       </body>
     </html>
   );
