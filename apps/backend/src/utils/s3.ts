@@ -6,8 +6,8 @@ import {
 } from '@aws-sdk/client-s3';
 import { Readable } from 'stream';
 
-const region =
-  process.env.AWS_REGION || process.env.S3_REGION || 'us-east-1';
+let currentRegion =
+  process.env.AWS_REGION || process.env.S3_REGION || 'ap-south-1';
 const bucketName =
   process.env.AWS_S3_BUCKET_NAME || process.env.S3_BUCKET_NAME || '';
 const accessKeyId =
@@ -27,15 +27,16 @@ export function isS3Configured(): boolean {
   return Boolean(bucketName && accessKeyId && secretAccessKey);
 }
 
-export function getS3Client(): S3Client | null {
+export function getS3Client(forceRecreate = false): S3Client | null {
   if (!isS3Configured()) {
     return null;
   }
-  if (!s3ClientInstance) {
+  if (!s3ClientInstance || forceRecreate) {
     s3ClientInstance = new S3Client({
-      region,
+      region: currentRegion,
       endpoint,
       forcePathStyle,
+      followRegionRedirects: true,
       credentials: {
         accessKeyId,
         secretAccessKey,
@@ -55,9 +56,7 @@ export function extractS3Key(keyOrUrl: string): string {
   }
   try {
     const url = new URL(keyOrUrl);
-    // Pathname starts with '/', remove it
     let pathName = url.pathname.replace(/^\/+/, '');
-    // If path style: /bucketName/key
     if (bucketName && pathName.startsWith(`${bucketName}/`)) {
       pathName = pathName.slice(bucketName.length + 1);
     }
@@ -65,6 +64,29 @@ export function extractS3Key(keyOrUrl: string): string {
   } catch {
     return keyOrUrl;
   }
+}
+
+function handlePermanentRedirect(error: any): boolean {
+  if (error?.Code === 'PermanentRedirect' || error?.name === 'PermanentRedirect') {
+    const targetEndpoint = error.Endpoint || error.endpoint;
+    if (targetEndpoint) {
+      const match = String(targetEndpoint).match(/\.s3[.-]([a-z0-9-]+)\.amazonaws\.com/i);
+      if (match && match[1]) {
+        console.log(`[S3] PermanentRedirect detected. Updating region from ${currentRegion} to ${match[1]}`);
+        currentRegion = match[1];
+        getS3Client(true);
+        return true;
+      }
+    }
+    // Default fallback to ap-south-1 if redirected
+    if (currentRegion !== 'ap-south-1') {
+      console.log(`[S3] PermanentRedirect detected. Switching default region to ap-south-1`);
+      currentRegion = 'ap-south-1';
+      getS3Client(true);
+      return true;
+    }
+  }
+  return false;
 }
 
 /**
@@ -76,6 +98,7 @@ export async function uploadPdfToS3(
   buffer: Buffer,
   s3Key: string,
   contentType = 'application/pdf',
+  isRetry = false,
 ): Promise<string | null> {
   const client = getS3Client();
   if (!client || !bucketName) {
@@ -104,8 +127,11 @@ export async function uploadPdfToS3(
       return `${normalizedEndpoint}/${bucketName}/${cleanKey}`;
     }
 
-    return `https://${bucketName}.s3.${region}.amazonaws.com/${cleanKey}`;
-  } catch (error) {
+    return `https://${bucketName}.s3.${currentRegion}.amazonaws.com/${cleanKey}`;
+  } catch (error: any) {
+    if (!isRetry && handlePermanentRedirect(error)) {
+      return uploadPdfToS3(buffer, s3Key, contentType, true);
+    }
     console.error(`[S3] Error uploading ${cleanKey} to S3:`, error);
     return null;
   }
@@ -115,7 +141,10 @@ export async function uploadPdfToS3(
  * Streams / fetches a PDF Buffer from AWS S3.
  * Returns Buffer or null if not found / S3 unavailable.
  */
-export async function getPdfFromS3(keyOrUrl: string): Promise<Buffer | null> {
+export async function getPdfFromS3(
+  keyOrUrl: string,
+  isRetry = false,
+): Promise<Buffer | null> {
   const client = getS3Client();
   if (!client || !bucketName) {
     return null;
@@ -148,6 +177,9 @@ export async function getPdfFromS3(keyOrUrl: string): Promise<Buffer | null> {
 
     return null;
   } catch (error: any) {
+    if (!isRetry && handlePermanentRedirect(error)) {
+      return getPdfFromS3(keyOrUrl, true);
+    }
     if (error?.name !== 'NoSuchKey') {
       console.warn(`[S3] Could not fetch ${cleanKey} from S3:`, error?.message || error);
     }
