@@ -1,6 +1,6 @@
-@'
 node_modules/
 dist/
+.cache/
 .env
 .env.local
 *.log
@@ -8,6 +8,5 @@ dist/
 coverage/
 .vscode/
 .idea/
-'@ | Out-File -Encoding utf8 .gitignore
 uploads/
 
