@@ -1,17 +1,7 @@
 {
   "$schema": "https://schema.railpack.com",
   "buildAptPackages": [
+    "...",
     "unzip"
-  ],
-  "deploy": {
-    "aptPackages": [
-      "chromium",
-      "fonts-ipafont-gothic",
-      "fonts-wqy-zenhei",
-      "fonts-thai-tlwg",
-      "fonts-kacst",
-      "fonts-freefont-ttf",
-      "libxss1"
-    ]
-  }
+  ]
 }
