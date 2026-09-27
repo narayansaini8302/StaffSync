@@ -1,9 +1,15 @@
-import puppeteer, { Browser, PDFOptions } from 'puppeteer';
+import type { Browser, PDFOptions } from 'puppeteer';
 
 let browser: Browser | null = null;
 let activeRenders = 0;
 const MAX_CONCURRENT_RENDERS = 3;
 const renderQueue: Array<() => void> = [];
+
+async function getPuppeteer(): Promise<typeof import('puppeteer')> {
+  const dynamicImport = new Function('modulePath', 'return import(modulePath)');
+  const puppeteerModule = await dynamicImport('puppeteer');
+  return (puppeteerModule.default || puppeteerModule) as typeof import('puppeteer');
+}
 
 async function acquireRenderSlot(): Promise<() => void> {
   if (activeRenders < MAX_CONCURRENT_RENDERS) {
@@ -28,6 +34,7 @@ function releaseRenderSlot(): void {
 
 async function getBrowser(): Promise<Browser> {
   if (!browser || !browser.connected) {
+    const puppeteer = await getPuppeteer();
     const launchOptions: any = {
       headless: true,
       args: [
