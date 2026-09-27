@@ -26,7 +26,11 @@ export function createApp() {
           scriptSrc: ["'self'", "'unsafe-inline'"],
           styleSrc: ["'self'", "'unsafe-inline'"],
           imgSrc: ["'self'", 'data:', 'blob:'],
-          connectSrc: ["'self'"],
+          connectSrc: [
+  "'self'",
+  'https://staffsync-production-5745.up.railway.app',
+  'https://staff-sync-frontend-six.vercel.app',
+],
           mediaSrc: ["'self'", 'blob:'],
         },
       },
@@ -34,7 +38,13 @@ export function createApp() {
       crossOriginResourcePolicy: { policy: 'cross-origin' },
     }),
   );
-  app.use(cors());
+ app.use(cors({
+  origin: [
+    'https://staff-sync-frontend-six.vercel.app',
+    'http://localhost:5173',
+  ],
+  credentials: true,
+}));
   app.use(express.json({ limit: '10mb' }));
    app.use(express.static(path.join(__dirname, '..', 'public')));
   app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
