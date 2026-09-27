@@ -12,7 +12,6 @@
       "fonts-kacst",
       "fonts-freefont-ttf",
       "libxss1"
-    ],
-    "startCommand": "npm run start --workspace=apps/backend"
+    ]
   }
 }
