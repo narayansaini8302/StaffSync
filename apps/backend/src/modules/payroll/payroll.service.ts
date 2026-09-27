@@ -1,6 +1,7 @@
 import { prisma } from '../../config/prisma';
 import { payrollConfig } from '../../config/payroll';
 import { renderPdf } from '../../utils/pdf';
+import { uploadPdfToS3, getPdfFromS3 } from '../../utils/s3';
 import { sendMail, sendMailBatch } from '../../utils/email';
 import Handlebars from 'handlebars';
 import fs from 'fs';
@@ -263,6 +264,10 @@ export async function processPayrollRun(
       slip,
     });
 
+    const periodStr = run.periodStart.toISOString().slice(0, 7);
+    const s3Key = `payslips/${companyId}/${run.id}/payslip-${slip.employeeCode}-${periodStr}.pdf`;
+    const s3Url = await uploadPdfToS3(pdfBuffer, s3Key);
+
     const payslipRow = await prisma.payslip.create({
       data: {
         payrollRunId: run.id,
@@ -272,6 +277,7 @@ export async function processPayrollRun(
         email: slip.email,
         periodStart: run.periodStart,
         periodEnd: run.periodEnd,
+        pdfPath: s3Url,
         presentDays: slip.presentDays,
         absentDays: slip.absentDays,
         halfDays: slip.halfDays,
@@ -405,6 +411,14 @@ export async function regeneratePayslipPdf(
   });
   if (!slip || slip.payrollRun.companyId !== companyId) throw new Error('NOT_FOUND');
 
+  // If already uploaded to S3, serve existing PDF directly
+  if (slip.pdfPath) {
+    const cachedBuffer = await getPdfFromS3(slip.pdfPath);
+    if (cachedBuffer) {
+      return cachedBuffer;
+    }
+  }
+
   // Fetch the employee to get their category
   const employee = await prisma.employee.findFirst({
     where: { id: slip.employeeId, companyId },
@@ -458,7 +472,7 @@ export async function regeneratePayslipPdf(
   const { getCompanyForPdf } = await import('../company/company.service');
   const company = await getCompanyForPdf(companyId);
 
-  return renderPayslipPdf({
+  const pdfBuffer = await renderPayslipPdf({
     companyName: company.name,
     companyAddress: company.address,
     companyGstin: company.gstin,
@@ -467,6 +481,18 @@ export async function regeneratePayslipPdf(
     periodEnd: slip.periodEnd,
     slip: computed,
   });
+
+  const periodStr = slip.periodStart.toISOString().slice(0, 7);
+  const s3Key = `payslips/${companyId}/${slip.payrollRunId}/payslip-${slip.employeeCode}-${periodStr}.pdf`;
+  const s3Url = await uploadPdfToS3(pdfBuffer, s3Key);
+  if (s3Url && s3Url !== slip.pdfPath) {
+    await prisma.payslip.update({
+      where: { id: slip.id },
+      data: { pdfPath: s3Url },
+    });
+  }
+
+  return pdfBuffer;
 }
 
 // ---------------------------------------------------------------------------

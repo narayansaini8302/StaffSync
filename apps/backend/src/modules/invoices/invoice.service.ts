@@ -8,6 +8,7 @@ import {
 } from '../../config/employee-categories';
 import { getCompanyForPdf } from '../company/company.service';
 import { renderPdf } from '../../utils/pdf';
+import { uploadPdfToS3, getPdfFromS3 } from '../../utils/s3';
 import { sendMail } from '../../utils/email';
 import Handlebars from 'handlebars';
 import fs from 'fs';
@@ -558,6 +559,11 @@ export async function generateInvoicePdf(companyId: string, invoiceId: string) {
   });
   if (!invoice) throw new Error('NOT_FOUND');
 
+  if (invoice.pdfPath) {
+    const cached = await getPdfFromS3(invoice.pdfPath);
+    if (cached) return cached;
+  }
+
   const categoryMap = new Map<EmployeeCategoryKey, { hours: number; amount: number; count: number; codes: string[] }>();
   let totalHours = 0;
 
@@ -643,7 +649,16 @@ export async function generateInvoicePdf(companyId: string, invoiceId: string) {
     bankIfsc: company.bankIfsc ?? 'HDFC0001234',
   };
 
-  return renderPdf(invoiceTpl(templateData));
+  const pdfBuffer = await renderPdf(invoiceTpl(templateData));
+  const s3Key = `invoices/${companyId}/invoice-${invoice.invoiceNumber}.pdf`;
+  const s3Url = await uploadPdfToS3(pdfBuffer, s3Key);
+  if (s3Url && s3Url !== invoice.pdfPath) {
+    await prisma.taxInvoice.update({
+      where: { id: invoice.id },
+      data: { pdfPath: s3Url },
+    });
+  }
+  return pdfBuffer;
 }
 
 export async function generateInvoiceAnnexurePdf(companyId: string, invoiceId: string) {
@@ -655,6 +670,11 @@ export async function generateInvoiceAnnexurePdf(companyId: string, invoiceId: s
     },
   });
   if (!invoice) throw new Error('NOT_FOUND');
+
+  if (invoice.annexurePdfPath) {
+    const cached = await getPdfFromS3(invoice.annexurePdfPath);
+    if (cached) return cached;
+  }
 
   const categoryMap = new Map<EmployeeCategoryKey, any>();
   let totalHours = 0;
@@ -705,7 +725,16 @@ export async function generateInvoiceAnnexurePdf(companyId: string, invoiceId: s
     categories,
   };
 
-  return renderPdf(annexureTpl(templateData));
+  const pdfBuffer = await renderPdf(annexureTpl(templateData));
+  const s3Key = `invoices/${companyId}/annexure-${invoice.invoiceNumber}.pdf`;
+  const s3Url = await uploadPdfToS3(pdfBuffer, s3Key);
+  if (s3Url && s3Url !== invoice.annexurePdfPath) {
+    await prisma.taxInvoice.update({
+      where: { id: invoice.id },
+      data: { annexurePdfPath: s3Url },
+    });
+  }
+  return pdfBuffer;
 }
 
 export async function sendInvoiceEmail(

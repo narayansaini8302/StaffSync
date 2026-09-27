@@ -2,6 +2,7 @@ import { prisma } from '../../config/prisma';
 import { parsePagination, buildPaginated } from '../../utils/pagination';
 import { Prisma } from '@prisma/client';
 import { renderPdf } from '../../utils/pdf';
+import { uploadPdfToS3, getPdfFromS3 } from '../../utils/s3';
 import { sendMail } from '../../utils/email';
 import Handlebars from 'handlebars';
 import fs from 'fs';
@@ -285,6 +286,11 @@ export async function generateJoiningLetterPdf(companyId: string, employeeId: st
   });
   if (!employee) throw new Error('EMPLOYEE_NOT_FOUND');
 
+  if (employee.joiningLetterPdfPath) {
+    const cached = await getPdfFromS3(employee.joiningLetterPdfPath);
+    if (cached) return cached;
+  }
+
   const { getCompanyForPdf } = await import('../company/company.service');
   const company = await getCompanyForPdf(companyId);
 
@@ -313,7 +319,16 @@ export async function generateJoiningLetterPdf(companyId: string, employeeId: st
     companyAddress: company.address,
   };
   const html = compiledJoiningTemplate(data);
-  return renderPdf(html, { pageRanges: '1' });
+  const pdfBuffer = await renderPdf(html, { pageRanges: '1' });
+  const s3Key = `joining-letters/${companyId}/joining-letter-${employee.employeeCode}.pdf`;
+  const s3Url = await uploadPdfToS3(pdfBuffer, s3Key);
+  if (s3Url && s3Url !== employee.joiningLetterPdfPath) {
+    await prisma.employee.update({
+      where: { id: employee.id },
+      data: { joiningLetterPdfPath: s3Url },
+    });
+  }
+  return pdfBuffer;
 }
 
 // ---------------------------------------------------------------------------

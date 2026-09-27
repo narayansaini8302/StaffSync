@@ -115,6 +115,7 @@ model Employee {
   dateOfJoining  DateTime
   dateOfLeaving  DateTime?
   isActive       Boolean          @default(true)
+  joiningLetterPdfPath String?
 
   baseSalary     Decimal?         @db.Decimal(12, 2)
   currency       String           @default("INR")
@@ -388,6 +389,9 @@ model TaxInvoice {
   dueDate        DateTime?
   paidAt         DateTime?
   notes          String?
+
+  pdfPath         String?
+  annexurePdfPath String?
 
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
