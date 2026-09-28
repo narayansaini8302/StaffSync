@@ -1739,7 +1739,7 @@ function InvoiceGeneratorSection({
   // GST & Terms State
   const [gstMode, setGstMode] = useState<'auto' | 'cgst_sgst' | 'igst' | 'none'>('auto');
   const [notes, setNotes] = useState(
-    '1. Payment is due within 15 days of invoice date.\n2. Please mention the invoice number on your remittance advice.\n3. Make all payments via NEFT/RTGS to the company bank account details listed above.',
+    '1. Payment is due within 15 days of invoice date.\n2. Please mention the invoice number on your remittance advice.\n3. Make all payments via NEFT/RTGS to the company bank account.',
   );
 
   // Manual Line Items State
@@ -1948,7 +1948,7 @@ function InvoiceGeneratorSection({
               </span>
             </div>
             <p className="text-xs text-muted mt-0.5">
-              Create manual general invoices. Company and bank details are default and protected, with automated calculations and client editing.
+              Create manual general invoices with automated calculations and client details. Company and bank details are automatically applied from your company profile.
             </p>
           </div>
         </div>
@@ -2077,195 +2077,111 @@ function InvoiceGeneratorSection({
           </div>
         </div>
 
-        {/* Row 2: Company Details (Default & Read-only) & Client Details (Editable) */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Company Details (Seller / Billed By) - Default / Read-only */}
-          <div className="bg-elevated/40 border border-subtle rounded-xl p-4 sm:p-5 space-y-4">
-            <div className="flex items-center justify-between pb-2 border-b border-subtle">
-              <div className="flex items-center gap-2">
-                <Building2 size={16} className="text-brand" />
-                <h3 className="text-xs font-bold text-fg uppercase tracking-wider">
-                  Company Details (Billed By)
-                </h3>
-              </div>
-              <span className="text-[10px] text-brand bg-brand/10 font-semibold px-2 py-0.5 rounded border border-brand/20">
-                Default Company Profile
-              </span>
+        {/* Row 2: Client Details (Editable) */}
+        <div className="bg-elevated/40 border border-subtle rounded-xl p-4 sm:p-5 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-subtle">
+            <div className="flex items-center gap-2">
+              <User size={16} className="text-brand" />
+              <h3 className="text-xs font-bold text-fg uppercase tracking-wider">
+                Client Details (Billed To / Buyer)
+              </h3>
             </div>
 
-            {/* Read-Only Company Details Card */}
-            <div className="space-y-3 text-xs">
-              <div>
-                <span className="text-[10px] text-muted uppercase tracking-wider block font-semibold">
-                  Company Name
-                </span>
-                <p className="text-sm font-bold text-fg mt-0.5">
-                  {company?.name || 'Your Company Name'}
-                </p>
-              </div>
-
-              <div>
-                <span className="text-[10px] text-muted uppercase tracking-wider block font-semibold">
-                  Registered Address
-                </span>
-                <p className="text-xs text-fg-2 mt-0.5 leading-relaxed">
-                  {company?.address || 'Address configured in Settings > Company'}
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 border-t border-subtle/50">
-                <div>
-                  <span className="text-[10px] text-muted uppercase tracking-wider block">
-                    GSTIN
-                  </span>
-                  <span className="font-mono text-xs font-semibold text-fg">
-                    {company?.gstin || 'Not registered'}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-[10px] text-muted uppercase tracking-wider block">
-                    State Code / PAN
-                  </span>
-                  <span className="font-mono text-xs text-fg">
-                    {company?.stateCode ? `Code ${company.stateCode}` : '—'}
-                    {company?.pan ? ` • PAN: ${company.pan}` : ''}
-                  </span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 border-t border-subtle/50">
-                <div>
-                  <span className="text-[10px] text-muted uppercase tracking-wider block">
-                    Email
-                  </span>
-                  <span className="text-xs text-fg">
-                    {company?.email || '—'}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-[10px] text-muted uppercase tracking-wider block">
-                    Phone
-                  </span>
-                  <span className="text-xs text-fg">
-                    {company?.phone || '—'}
-                  </span>
-                </div>
-              </div>
-
-              <div className="p-2.5 rounded-lg bg-surface/70 border border-subtle text-[11px] text-muted flex items-center justify-between">
-                <span>Company information is automatically pulled from your account settings.</span>
-              </div>
+            {/* Quick Select Client Dropdown */}
+            <div className="w-full sm:w-auto">
+              <select
+                value={selectedClientId}
+                onChange={(e) => handleClientSelect(e.target.value)}
+                className="w-full sm:w-auto px-3 py-1.5 rounded-lg bg-surface border border-subtle text-fg text-xs focus:outline-none focus:border-brand"
+              >
+                <option value="">— Select Saved Client (Auto-fill) —</option>
+                {clients.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} {c.gstin ? `(${c.gstin})` : ''}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
-          {/* Client Details (Buyer / Billed To) - Fully Editable */}
-          <div className="bg-elevated/40 border border-subtle rounded-xl p-4 sm:p-5 space-y-3.5">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-subtle">
-              <div className="flex items-center gap-2">
-                <User size={16} className="text-brand" />
-                <h3 className="text-xs font-bold text-fg uppercase tracking-wider">
-                  Client Details (Billed To / Buyer)
-                </h3>
-              </div>
-
-              {/* Quick Select Client Dropdown */}
-              <div className="w-full sm:w-auto">
-                <select
-                  value={selectedClientId}
-                  onChange={(e) => handleClientSelect(e.target.value)}
-                  className="w-full sm:w-auto px-2.5 py-1 rounded-lg bg-surface border border-subtle text-fg text-xs focus:outline-none focus:border-brand"
-                >
-                  <option value="">— Select Saved Client (Auto-fill) —</option>
-                  {clients.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name} {c.gstin ? `(${c.gstin})` : ''}
-                    </option>
-                  ))}
-                </select>
-              </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
+            <div className="sm:col-span-2">
+              <label className="block text-[11px] font-medium text-fg-2 mb-1">
+                Client / Organization Name <span className="text-danger">*</span>
+              </label>
+              <input
+                type="text"
+                required
+                value={clientName}
+                onChange={(e) => setClientName(e.target.value)}
+                placeholder="e.g. Global Tech Solutions Ltd"
+                className="w-full px-3 py-2 rounded-lg bg-surface border border-subtle text-fg font-medium focus:outline-none focus:border-brand"
+              />
             </div>
 
-            <div className="space-y-3 text-xs">
-              <div>
-                <label className="block text-[11px] font-medium text-fg-2 mb-1">
-                  Client / Organization Name <span className="text-danger">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={clientName}
-                  onChange={(e) => setClientName(e.target.value)}
-                  placeholder="e.g. Global Tech Solutions Ltd"
-                  className="w-full px-3 py-1.5 rounded-lg bg-surface border border-subtle text-fg font-medium focus:outline-none focus:border-brand"
-                />
-              </div>
+            <div>
+              <label className="block text-[11px] font-medium text-fg-2 mb-1">
+                GSTIN
+              </label>
+              <input
+                type="text"
+                value={clientGstin}
+                onChange={(e) => setClientGstin(e.target.value.toUpperCase())}
+                placeholder="27BBBBB1111B2Z6"
+                className="w-full px-3 py-2 rounded-lg bg-surface border border-subtle text-fg font-mono uppercase focus:outline-none focus:border-brand"
+              />
+            </div>
 
-              <div>
-                <label className="block text-[11px] font-medium text-fg-2 mb-1">
-                  Client Billing Address
-                </label>
-                <textarea
-                  rows={2}
-                  value={clientAddress}
-                  onChange={(e) => setClientAddress(e.target.value)}
-                  placeholder="Suite No., Building, City, State, PIN"
-                  className="w-full px-3 py-1.5 rounded-lg bg-surface border border-subtle text-fg focus:outline-none focus:border-brand resize-none"
-                />
-              </div>
+            <div className="sm:col-span-2">
+              <label className="block text-[11px] font-medium text-fg-2 mb-1">
+                Client Billing Address
+              </label>
+              <input
+                type="text"
+                value={clientAddress}
+                onChange={(e) => setClientAddress(e.target.value)}
+                placeholder="Suite No., Building, City, State, PIN"
+                className="w-full px-3 py-2 rounded-lg bg-surface border border-subtle text-fg focus:outline-none focus:border-brand"
+              />
+            </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[11px] font-medium text-fg-2 mb-1">
-                    GSTIN
-                  </label>
-                  <input
-                    type="text"
-                    value={clientGstin}
-                    onChange={(e) => setClientGstin(e.target.value.toUpperCase())}
-                    placeholder="27BBBBB1111B2Z6"
-                    className="w-full px-3 py-1.5 rounded-lg bg-surface border border-subtle text-fg font-mono uppercase focus:outline-none focus:border-brand"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-medium text-fg-2 mb-1">
-                    State Code (2-digit)
-                  </label>
-                  <input
-                    type="text"
-                    value={clientStateCode}
-                    onChange={(e) => setClientStateCode(e.target.value)}
-                    placeholder="e.g. 27 or 08"
-                    className="w-full px-3 py-1.5 rounded-lg bg-surface border border-subtle text-fg font-mono focus:outline-none focus:border-brand"
-                  />
-                </div>
-              </div>
+            <div>
+              <label className="block text-[11px] font-medium text-fg-2 mb-1">
+                State Code (2-digit)
+              </label>
+              <input
+                type="text"
+                value={clientStateCode}
+                onChange={(e) => setClientStateCode(e.target.value)}
+                placeholder="e.g. 27 or 08"
+                className="w-full px-3 py-2 rounded-lg bg-surface border border-subtle text-fg font-mono focus:outline-none focus:border-brand"
+              />
+            </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[11px] font-medium text-fg-2 mb-1">
-                    Contact Email
-                  </label>
-                  <input
-                    type="email"
-                    value={clientEmail}
-                    onChange={(e) => setClientEmail(e.target.value)}
-                    placeholder="accounts@client.com"
-                    className="w-full px-3 py-1.5 rounded-lg bg-surface border border-subtle text-fg focus:outline-none focus:border-brand"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-medium text-fg-2 mb-1">
-                    Contact Phone
-                  </label>
-                  <input
-                    type="text"
-                    value={clientPhone}
-                    onChange={(e) => setClientPhone(e.target.value)}
-                    placeholder="+91 9123456780"
-                    className="w-full px-3 py-1.5 rounded-lg bg-surface border border-subtle text-fg focus:outline-none focus:border-brand"
-                  />
-                </div>
-              </div>
+            <div>
+              <label className="block text-[11px] font-medium text-fg-2 mb-1">
+                Contact Email
+              </label>
+              <input
+                type="email"
+                value={clientEmail}
+                onChange={(e) => setClientEmail(e.target.value)}
+                placeholder="accounts@client.com"
+                className="w-full px-3 py-2 rounded-lg bg-surface border border-subtle text-fg focus:outline-none focus:border-brand"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-medium text-fg-2 mb-1">
+                Contact Phone
+              </label>
+              <input
+                type="text"
+                value={clientPhone}
+                onChange={(e) => setClientPhone(e.target.value)}
+                placeholder="+91 9123456780"
+                className="w-full px-3 py-2 rounded-lg bg-surface border border-subtle text-fg focus:outline-none focus:border-brand"
+              />
             </div>
           </div>
         </div>
@@ -2500,69 +2416,32 @@ function InvoiceGeneratorSection({
           </div>
         </div>
 
-        {/* Row 5: Bank Details (Default & Read-only) & Automated Calculations (2-Column Grid) */}
+        {/* Row 5: Terms & Notes and Automated Calculations (2-Column Grid) */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Default Bank Details & Notes */}
-          <div className="space-y-4">
-            {/* Read-only Company Bank Details */}
-            <div className="bg-elevated/40 border border-subtle rounded-xl p-4 text-xs space-y-3">
-              <div className="flex items-center justify-between pb-1 border-b border-subtle">
-                <h4 className="font-semibold text-fg flex items-center gap-1.5">
-                  <CreditCard size={14} className="text-brand" /> Bank & Remittance Details
-                </h4>
+          {/* Notes & Terms */}
+          <div className="bg-elevated/40 border border-subtle rounded-xl p-5 text-xs flex flex-col justify-between space-y-4">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between pb-3 border-b border-subtle">
+                <label className="font-bold text-fg uppercase tracking-wider text-xs flex items-center gap-2">
+                  <FileText size={15} className="text-brand" /> Terms & Conditions / Remarks
+                </label>
                 <span className="text-[10px] text-muted bg-surface px-2 py-0.5 rounded border border-subtle">
-                  Default Bank Account
+                  Optional
                 </span>
               </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                <div>
-                  <span className="text-[10px] text-muted uppercase tracking-wider block">
-                    Bank Name
-                  </span>
-                  <p className="font-semibold text-fg mt-0.5">
-                    {company?.bankName || 'Not configured'}
-                  </p>
-                </div>
-                <div>
-                  <span className="text-[10px] text-muted uppercase tracking-wider block">
-                    Account Number
-                  </span>
-                  <p className="font-mono font-semibold text-fg mt-0.5">
-                    {company?.bankAccount || 'Not configured'}
-                  </p>
-                </div>
-                <div>
-                  <span className="text-[10px] text-muted uppercase tracking-wider block">
-                    IFSC Code
-                  </span>
-                  <p className="font-mono text-fg mt-0.5">
-                    {company?.bankIfsc || '—'}
-                  </p>
-                </div>
-                <div>
-                  <span className="text-[10px] text-muted uppercase tracking-wider block">
-                    Branch Name
-                  </span>
-                  <p className="text-fg mt-0.5">
-                    {(company as any)?.bankBranch || 'Main Branch'}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Notes & Terms */}
-            <div className="bg-elevated/40 border border-subtle rounded-xl p-4 text-xs space-y-2">
-              <label className="block font-semibold text-fg">
-                Terms & Conditions / Remarks
-              </label>
+              <p className="text-[11px] text-muted leading-relaxed">
+                Add payment terms, remittance references, or remarks to display on the invoice.
+              </p>
               <textarea
-                rows={3}
+                rows={6}
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="Payment terms, remittance reference, etc."
-                className="w-full px-3 py-2 rounded-lg bg-surface border border-subtle text-fg text-xs focus:outline-none focus:border-brand resize-none"
+                className="w-full p-3 rounded-lg bg-surface border border-subtle text-fg text-xs focus:outline-none focus:border-brand resize-none leading-relaxed"
               />
+            </div>
+            <div className="text-[11px] text-muted pt-3 border-t border-subtle flex items-center justify-between">
+              <span>Company & bank remittance details are automatically included from your company profile.</span>
             </div>
           </div>
 
