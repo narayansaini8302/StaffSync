@@ -103,10 +103,16 @@ export async function computePayslipForEmployee(
   }
 
   let totalHours = totalMinutes / 60;
-  if (days.length === 0) {
-    totalHours = payrollConfig.daysInMonth * payrollConfig.standardHoursPerDay;
-    presentDays = payrollConfig.daysInMonth;
+
+  // Unmarked days handling:
+  // If an employee is completely unmarked or has unmarked days in the period,
+  // automatically count those unmarked days as ABSENT (deduct pay), NOT full present.
+  const totalPeriodDays = periodEnd ? periodEnd.getUTCDate() : payrollConfig.daysInMonth;
+  const markedDaysCount = presentDays + halfDays + leaveDays + absentDays;
+  if (markedDaysCount < totalPeriodDays) {
+    absentDays += (totalPeriodDays - markedDaysCount);
   }
+
   const category = (employee.category as EmployeeCategoryKey) || 'HOUSEKEEPING';
   const catDef = categoryDefaults[category] || categoryDefaults.HOUSEKEEPING;
   const hourlyRate =
@@ -504,9 +510,10 @@ export async function regeneratePayslipPdf(
   }
 
   let totalHours = totalMinutes / 60;
-  if (days.length === 0) {
-    totalHours = payrollConfig.daysInMonth * payrollConfig.standardHoursPerDay;
-    presentDays = payrollConfig.daysInMonth;
+  const totalPeriodDays = slip.periodEnd ? new Date(slip.periodEnd).getUTCDate() : payrollConfig.daysInMonth;
+  const markedDaysCount = presentDays + halfDays + leaveDays + absentDays;
+  if (markedDaysCount < totalPeriodDays) {
+    absentDays += (totalPeriodDays - markedDaysCount);
   }
 
   const earnings = slip.lineItems

@@ -451,7 +451,12 @@ function RunDetailsModal({
                         </div>
                       </td>
                       <td className="px-3 py-2 text-right text-fg">
-                        {Number(slip.presentDays)}
+                        <span className="font-medium">{Number(slip.presentDays)}d</span>
+                        {Number(slip.absentDays ?? 0) > 0 && (
+                          <span className="text-xs text-danger/80 block">
+                            ({Number(slip.absentDays)} absent)
+                          </span>
+                        )}
                       </td>
                       <td className="px-3 py-2 text-right font-mono text-fg">
                         {formatMoney(slip.grossPay)}
