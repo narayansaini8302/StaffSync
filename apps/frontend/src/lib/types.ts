@@ -14,8 +14,8 @@ export interface Employee {
   id: string;
   employeeCode: string;
   firstName: string;
-  lastName: string;
-  email: string;
+  lastName?: string | null;
+  email?: string | null;
   phone?: string | null;
   gender?: string | null;
   address?: string | null;
@@ -51,8 +51,8 @@ export interface Paginated<T> {
 export interface CreateEmployeeInput {
   employeeCode: string;
   firstName: string;
-  lastName: string;
-  email: string;
+  lastName?: string;
+  email?: string;
   phone?: string;
   gender?: string;
   address?: string;

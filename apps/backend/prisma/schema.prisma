@@ -104,8 +104,8 @@ model Employee {
   id             String           @id @default(uuid())
   employeeCode   String
   firstName      String
-  lastName       String
-  email          String
+  lastName       String?          @default("")
+  email          String?
   phone          String?
   gender         String?
   address        String?

@@ -251,7 +251,7 @@ export async function computeInvoiceLines(
     lines.push({
       employeeId: employee.id,
       employeeCode: employee.employeeCode,
-      employeeName: `${employee.firstName} ${employee.lastName}`,
+      employeeName: [employee.firstName, employee.lastName].filter(Boolean).join(' '),
       category,
       hoursWorked,
       hourlyRate,

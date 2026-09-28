@@ -208,7 +208,7 @@ export default function EmployeesPage() {
                 </td>
                 <td className="px-4 py-3 text-fg">
                   <div className="font-medium text-fg">
-                    {emp.firstName} {emp.lastName}
+                    {[emp.firstName, emp.lastName].filter(Boolean).join(' ')}
                   </div>
                   {emp.assignedClient ? (
                     <div className="text-[11px] text-brand font-medium flex items-center gap-1 mt-0.5">
@@ -245,7 +245,7 @@ export default function EmployeesPage() {
                     </div>
                   </div>
                 </td>
-                <td className="px-4 py-3 text-fg-2">{emp.email}</td>
+                <td className="px-4 py-3 text-fg-2">{emp.email || '—'}</td>
                 <td className="px-4 py-3 text-fg-2 text-xs">{emp.phone ?? '—'}</td>
                 <td className="px-4 py-3">
                   {emp.isActive ? (
@@ -267,13 +267,15 @@ export default function EmployeesPage() {
                     >
                       <Download size={14} />
                     </button>
-                    <button
-                      onClick={() => setEmailingLetterEmp(emp)}
-                      className="p-1.5 rounded hover:bg-hover text-fg-2 hover:text-brand"
-                      title="Email joining letter"
-                    >
-                      <Mail size={14} />
-                    </button>
+                    {emp.email && (
+                      <button
+                        onClick={() => setEmailingLetterEmp(emp)}
+                        className="p-1.5 rounded hover:bg-hover text-fg-2 hover:text-brand"
+                        title="Email joining letter"
+                      >
+                        <Mail size={14} />
+                      </button>
+                    )}
                     <button
                       onClick={() => setEditing(emp)}
                       className="p-1.5 rounded hover:bg-hover text-fg-2 hover:text-brand"
@@ -494,12 +496,12 @@ function EmployeeFormModal({
         ...form,
         employeeCode: form.employeeCode.trim(),
         firstName: form.firstName.trim(),
-        lastName: form.lastName.trim(),
-        email: form.email.trim(),
+        lastName: form.lastName ? form.lastName.trim() : undefined,
+        email: form.email ? form.email.trim() : undefined,
         phone: form.phone?.trim() || undefined,
         gender: form.gender || undefined,
         address: form.address?.trim() || '',
-        fatherName: form.fatherName?.trim() || '',
+        fatherName: form.fatherName ? form.fatherName.trim() : undefined,
         customCategory: form.category === 'CUSTOM' ? form.customCategory?.trim() : undefined,
         department: form.department?.trim() || undefined,
         designation: form.designation?.trim() || undefined,
@@ -595,18 +597,16 @@ function EmployeeFormModal({
           />
           <Field
             label="Last name"
-            value={form.lastName}
+            value={form.lastName ?? ''}
             onChange={(v) => setForm({ ...form, lastName: v })}
-            required
           />
         </div>
 
-        {/* Row 4: Father's name (required) */}
+        {/* Row 4: Father's name */}
         <Field
           label="Father's name"
           value={form.fatherName ?? ''}
           onChange={(v) => setForm({ ...form, fatherName: v })}
-          required
         />
 
         {/* Row 5: Email + Phone */}
@@ -614,9 +614,9 @@ function EmployeeFormModal({
           <Field
             label="Email"
             type="email"
-            value={form.email}
+            value={form.email ?? ''}
             onChange={(v) => setForm({ ...form, email: v })}
-            required
+            placeholder="worker@example.com (optional)"
           />
           <Field
             label="Phone"

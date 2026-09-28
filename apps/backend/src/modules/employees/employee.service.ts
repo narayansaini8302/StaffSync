@@ -19,12 +19,12 @@ export type EmployeeCategoryInput =
 export interface CreateEmployeeInput {
   employeeCode: string;
   firstName: string;
-  lastName: string;
-  email: string;
+  lastName?: string;
+  email?: string;
   phone?: string;
   gender?: string;
   address: string;
-  fatherName: string;
+  fatherName?: string;
   category?: EmployeeCategoryInput;
   customCategory?: string;
   pfApplicable?: boolean;
@@ -60,22 +60,29 @@ export async function createEmployee(companyId: string, input: CreateEmployeeInp
   });
   if (existing) throw new Error('EMPLOYEE_CODE_TAKEN');
 
+  if (input.email?.trim()) {
+    const existingEmail = await prisma.employee.findFirst({
+      where: { companyId, email: input.email.trim() },
+    });
+    if (existingEmail) throw new Error('EMAIL_TAKEN');
+  }
+
   const employee = await prisma.employee.create({
     data: {
-      employeeCode: input.employeeCode,
-      firstName: input.firstName,
-      lastName: input.lastName,
-      email: input.email,
-      phone: input.phone,
+      employeeCode: input.employeeCode.trim(),
+      firstName: input.firstName.trim(),
+      lastName: input.lastName?.trim() || '',
+      email: input.email?.trim() || null,
+      phone: input.phone?.trim() || null,
       gender: input.gender ?? null,
-      address: input.address,
-      fatherName: input.fatherName,
+      address: input.address.trim(),
+      fatherName: input.fatherName?.trim() || null,
       category: input.category ?? 'HOUSEKEEPING',
-      customCategory: input.category === 'CUSTOM' ? (input.customCategory ?? null) : null,
+      customCategory: input.category === 'CUSTOM' ? (input.customCategory?.trim() ?? null) : null,
       pfApplicable: input.pfApplicable ?? true,
       esiApplicable: input.esiApplicable ?? true,
-      department: input.department,
-      designation: input.designation,
+      department: input.department?.trim() || null,
+      designation: input.designation?.trim() || null,
       employmentType: input.employmentType ?? 'FULL_TIME',
       dateOfJoining: new Date(input.dateOfJoining),
       baseSalary: input.baseSalary,
@@ -202,14 +209,14 @@ export async function updateEmployee(
 
   const data: Prisma.EmployeeUpdateInput = {};
 
-  if (input.employeeCode !== undefined) data.employeeCode = input.employeeCode;
-  if (input.firstName !== undefined) data.firstName = input.firstName;
-  if (input.lastName !== undefined) data.lastName = input.lastName;
-  if (input.email !== undefined) data.email = input.email;
-  if (input.phone !== undefined) data.phone = input.phone;
+  if (input.employeeCode !== undefined) data.employeeCode = input.employeeCode.trim();
+  if (input.firstName !== undefined) data.firstName = input.firstName.trim();
+  if (input.lastName !== undefined) data.lastName = input.lastName?.trim() || '';
+  if (input.email !== undefined) data.email = input.email?.trim() || null;
+  if (input.phone !== undefined) data.phone = input.phone?.trim() || null;
   if (input.gender !== undefined) data.gender = input.gender;
-  if (input.address !== undefined) data.address = input.address;
-  if (input.fatherName !== undefined) data.fatherName = input.fatherName;
+  if (input.address !== undefined) data.address = input.address.trim();
+  if (input.fatherName !== undefined) data.fatherName = input.fatherName?.trim() || null;
   if (input.category !== undefined) data.category = input.category;
   if (input.customCategory !== undefined) data.customCategory = input.customCategory;
   if (input.pfApplicable !== undefined) data.pfApplicable = input.pfApplicable;
@@ -310,7 +317,7 @@ export async function generateJoiningLetterPdf(companyId: string, employeeId: st
   const category = employee.category as EmployeeCategoryKey;
 
   const data = {
-    employeeName: `${employee.firstName} ${employee.lastName}`,
+    employeeName: [employee.firstName, employee.lastName].filter(Boolean).join(' '),
     employeeCode: employee.employeeCode,
     fatherName: employee.fatherName ?? '—',
     category:

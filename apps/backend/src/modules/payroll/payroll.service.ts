@@ -30,7 +30,7 @@ export interface ComputedPayslip {
   employeeId: string;
   employeeCode: string;
   employeeName: string;
-  email: string;
+  email?: string | null;
   category: EmployeeCategoryKey;
   customCategory?: string | null;
   hourlyRate: number;
@@ -148,8 +148,8 @@ export async function computePayslipForEmployee(
   return {
     employeeId: employee.id,
     employeeCode: employee.employeeCode,
-    employeeName: employee.firstName + ' ' + employee.lastName,
-    email: employee.email,
+    employeeName: [employee.firstName, employee.lastName].filter(Boolean).join(' '),
+    email: employee.email || null,
     category,
     customCategory: employee.customCategory ?? null,
     hourlyRate,

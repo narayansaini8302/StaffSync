@@ -460,13 +460,15 @@ function RunDetailsModal({
                       </td>
                       <td className="px-3 py-2 text-right">
                         <div className="inline-flex items-center gap-1">
-                          <button
-                            onClick={() => setEmailingSlip(slip)}
-                            className="p-1.5 rounded hover:bg-hover text-fg-2 hover:text-brand"
-                            title="Send payslip email"
-                          >
-                            <Mail size={15} />
-                          </button>
+                          {slip.email && (
+                            <button
+                              onClick={() => setEmailingSlip(slip)}
+                              className="p-1.5 rounded hover:bg-hover text-fg-2 hover:text-brand"
+                              title="Send payslip email"
+                            >
+                              <Mail size={15} />
+                            </button>
+                          )}
                           <button
                             onClick={() => downloadPdf(slip)}
                             disabled={downloadingId === slip.id}
