@@ -92,14 +92,25 @@ export async function createEmployee(companyId: string, input: CreateEmployeeInp
     },
   });
 
-  if (input.clientId) {
+  let targetClientId = input.clientId;
+  if (!targetClientId) {
+    const clients = await prisma.client.findMany({
+      where: { companyId },
+      take: 2,
+    });
+    if (clients.length === 1) {
+      targetClientId = clients[0].id;
+    }
+  }
+
+  if (targetClientId) {
     const client = await prisma.client.findFirst({
-      where: { id: input.clientId, companyId },
+      where: { id: targetClientId, companyId },
     });
     if (client) {
       await prisma.employeeAssignment.create({
         data: {
-          clientId: input.clientId,
+          clientId: targetClientId,
           employeeId: employee.id,
           startDate: new Date(input.dateOfJoining),
           isActive: true,
@@ -190,14 +201,9 @@ export async function updateEmployee(
   // reject the update.
   const willHaveAddress =
     input.address !== undefined ? input.address : existing.address;
-  const willHaveFatherName =
-    input.fatherName !== undefined ? input.fatherName : existing.fatherName;
 
   if (!willHaveAddress || willHaveAddress.trim().length === 0) {
     throw new Error('ADDRESS_REQUIRED');
-  }
-  if (!willHaveFatherName || willHaveFatherName.trim().length === 0) {
-    throw new Error('FATHER_NAME_REQUIRED');
   }
 
   if (input.employeeCode && input.employeeCode !== existing.employeeCode) {
@@ -252,7 +258,7 @@ export async function updateEmployee(
           data: {
             clientId: input.clientId,
             employeeId: id,
-            startDate: new Date(),
+            startDate: new Date(updatedEmployee.dateOfJoining),
             isActive: true,
           },
         });

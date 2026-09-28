@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Search,
@@ -473,11 +473,18 @@ function EmployeeFormModal({
           dateOfJoining: new Date().toISOString().slice(0, 10),
           baseSalary: categoryDefaults.HOUSEKEEPING,
           currency: 'INR',
-          clientId: '',
+          clientId: clientsQuery.data?.data?.length === 1 ? clientsQuery.data.data[0].id : '',
         });
       }
     }
   }
+
+  useEffect(() => {
+    const list = clientsQuery.data?.data;
+    if (!employee && list && list.length === 1 && !form.clientId) {
+      setForm((prev) => ({ ...prev, clientId: list[0].id }));
+    }
+  }, [clientsQuery.data?.data, employee, form.clientId]);
 
   const onCategoryChange = (cat: EmployeeCategory) => {
     setForm({

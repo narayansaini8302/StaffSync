@@ -211,6 +211,7 @@ export async function computeInvoiceLines(
   periodStart: Date,
   periodEnd: Date,
 ): Promise<{ lines: ComputedLineItem[]; subtotal: number }> {
+  // 1. Get explicitly assigned employees for this client
   const assignments = await prisma.employeeAssignment.findMany({
     where: {
       clientId,
@@ -220,20 +221,37 @@ export async function computeInvoiceLines(
       OR: [{ endDate: null }, { endDate: { gte: periodStart } }],
     },
   });
+  const assignedEmployeeIds = new Set(assignments.map((a) => a.employeeId));
+
+  // 2. Also check if there are active employees in the company who have no other active assignment
+  // (e.g. they were added without explicitly selecting a client)
+  const otherClientAssignments = await prisma.employeeAssignment.findMany({
+    where: {
+      client: { companyId },
+      clientId: { not: clientId },
+      isActive: true,
+    },
+    select: { employeeId: true },
+  });
+  const otherClientEmployeeIds = new Set(otherClientAssignments.map((a) => a.employeeId));
+
+  const allCompanyEmployees = await prisma.employee.findMany({
+    where: { companyId, isActive: true },
+    orderBy: { employeeCode: 'asc' },
+  });
+
+  const eligibleEmployees = allCompanyEmployees.filter(
+    (emp) => assignedEmployeeIds.has(emp.id) || !otherClientEmployeeIds.has(emp.id),
+  );
 
   const overrides = await prisma.clientCategoryRate.findMany({ where: { clientId } });
   const overrideMap = new Map(overrides.map((o) => [o.category as EmployeeCategoryKey, Number(o.hourlyRate)]));
 
   const lines: ComputedLineItem[] = [];
-  for (const a of assignments) {
-    const employee = await prisma.employee.findFirst({
-      where: { id: a.employeeId, companyId },
-    });
-    if (!employee) continue;
-
+  for (const employee of eligibleEmployees) {
     const days = await prisma.attendanceDay.findMany({
       where: {
-        employeeId: a.employeeId,
+        employeeId: employee.id,
         companyId,
         date: { gte: periodStart, lte: periodEnd },
         status: { in: ['PRESENT', 'HALF_DAY'] },
@@ -241,11 +259,37 @@ export async function computeInvoiceLines(
     });
 
     const totalMinutes = days.reduce((s, d) => s + d.totalMinutes, 0);
-    const hoursWorked = round2(totalMinutes / 60);
-    if (hoursWorked === 0) continue;
+    let hoursWorked = round2(totalMinutes / 60);
 
-    const category = employee.category as EmployeeCategoryKey;
-    const hourlyRate = overrideMap.get(category) ?? categoryDefaults[category].perHour;
+    // If attendance was logged, use logged hours.
+    // If no daily attendance records exist for this period yet,
+    // default to full month standard hours (208 hours = 26 days * 8h)
+    // so the employee's monthly contracted salary is accurately billed.
+    if (hoursWorked === 0) {
+      if (days.length === 0) {
+        hoursWorked = 208;
+      } else {
+        // Attendance was explicitly marked as ABSENT/LEAVE on all days
+        continue;
+      }
+    }
+
+    const category = (employee.category as EmployeeCategoryKey) || 'CUSTOM';
+    const catDef = categoryDefaults[category] || categoryDefaults.CUSTOM;
+
+    // Rate per hour calculation:
+    // 1. If standard category and client has explicit rate override: use client override
+    // 2. If employee has custom base salary: hourly rate = baseSalary / 208 hours (26 days * 8 hours)
+    // 3. Fallback to category default perHour rate
+    let hourlyRate: number;
+    if (category !== 'CUSTOM' && overrideMap.has(category)) {
+      hourlyRate = overrideMap.get(category)!;
+    } else if (employee.baseSalary && Number(employee.baseSalary) > 0) {
+      hourlyRate = round2(Number(employee.baseSalary) / 208);
+    } else {
+      hourlyRate = catDef.perHour;
+    }
+
     const amount = round2(hoursWorked * hourlyRate);
 
     lines.push({
@@ -564,12 +608,23 @@ export async function generateInvoicePdf(companyId: string, invoiceId: string) {
     if (cached) return cached;
   }
 
-  const categoryMap = new Map<EmployeeCategoryKey, { hours: number; amount: number; count: number; codes: string[] }>();
+  const empIds = invoice.lineItems.map((l) => l.employeeId).filter(Boolean) as string[];
+  const emps = await prisma.employee.findMany({
+    where: { id: { in: empIds } },
+    select: { id: true, customCategory: true },
+  });
+  const customCatMap = new Map(emps.map((e) => [e.id, e.customCategory]));
+
+  const categoryMap = new Map<string, { label: string; hours: number; amount: number; count: number; codes: string[] }>();
   let totalHours = 0;
 
   for (const li of invoice.lineItems) {
+    const customName = li.employeeId ? customCatMap.get(li.employeeId) : null;
     const cat = li.category as EmployeeCategoryKey;
-    const g = categoryMap.get(cat) ?? { hours: 0, amount: 0, count: 0, codes: [] };
+    const groupKey = cat === 'CUSTOM' ? (customName || 'Custom') : cat;
+    const groupLabel = cat === 'CUSTOM' ? (customName || 'Custom') : (categoryDefaults[cat]?.label ?? cat);
+
+    const g = categoryMap.get(groupKey) ?? { label: groupLabel, hours: 0, amount: 0, count: 0, codes: [] };
     const h = Number(li.hoursWorked);
     const a = Number(li.amount);
     g.hours += h;
@@ -577,16 +632,16 @@ export async function generateInvoicePdf(companyId: string, invoiceId: string) {
     g.count += 1;
     g.codes.push(li.employeeCode);
     totalHours += h;
-    categoryMap.set(cat, g);
+    categoryMap.set(groupKey, g);
   }
 
   let idx = 0;
-  const categories = Array.from(categoryMap.entries()).map(([cat, g]) => {
+  const categories = Array.from(categoryMap.values()).map((g) => {
     idx++;
     const codes = [...g.codes].sort();
     return {
       index: idx,
-      label: categoryDefaults[cat]?.label ?? cat,
+      label: g.label,
       employeeCount: g.count,
       hours: g.hours.toFixed(2),
       avgRate: fmt(g.hours > 0 ? g.amount / g.hours : 0),
@@ -649,7 +704,9 @@ export async function generateInvoicePdf(companyId: string, invoiceId: string) {
     bankIfsc: company.bankIfsc ?? 'HDFC0001234',
   };
 
-  const pdfBuffer = await renderPdf(invoiceTpl(templateData));
+  const pdfBuffer = await renderPdf(invoiceTpl(templateData), {
+    margin: { top: '8mm', right: '10mm', bottom: '8mm', left: '10mm' },
+  });
   const s3Key = `invoices/${companyId}/invoice-${invoice.invoiceNumber}.pdf`;
   const s3Url = await uploadPdfToS3(pdfBuffer, s3Key);
   if (s3Url && s3Url !== invoice.pdfPath) {
@@ -676,17 +733,28 @@ export async function generateInvoiceAnnexurePdf(companyId: string, invoiceId: s
     if (cached) return cached;
   }
 
-  const categoryMap = new Map<EmployeeCategoryKey, any>();
+  const empIds = invoice.lineItems.map((l) => l.employeeId).filter(Boolean) as string[];
+  const emps = await prisma.employee.findMany({
+    where: { id: { in: empIds } },
+    select: { id: true, customCategory: true },
+  });
+  const customCatMap = new Map(emps.map((e) => [e.id, e.customCategory]));
+
+  const categoryMap = new Map<string, any>();
   let totalHours = 0;
   let counter = 0;
 
   for (const li of invoice.lineItems) {
+    const customName = li.employeeId ? customCatMap.get(li.employeeId) : null;
     const cat = li.category as EmployeeCategoryKey;
     const catConfig = categoryDefaults[cat] ?? { label: 'General Services', perHour: 0 };
-    if (!categoryMap.has(cat)) {
-      categoryMap.set(cat, { label: catConfig.label, hours: 0, subtotal: 0, items: [] });
+    const groupKey = cat === 'CUSTOM' ? (customName || 'Custom') : cat;
+    const groupLabel = cat === 'CUSTOM' ? (customName || 'Custom') : (catConfig.label || cat);
+
+    if (!categoryMap.has(groupKey)) {
+      categoryMap.set(groupKey, { label: groupLabel, hours: 0, subtotal: 0, items: [] });
     }
-    const group = categoryMap.get(cat)!;
+    const group = categoryMap.get(groupKey)!;
     counter++;
     const h = Number(li.hoursWorked);
     const a = Number(li.amount);
@@ -725,7 +793,9 @@ export async function generateInvoiceAnnexurePdf(companyId: string, invoiceId: s
     categories,
   };
 
-  const pdfBuffer = await renderPdf(annexureTpl(templateData));
+  const pdfBuffer = await renderPdf(annexureTpl(templateData), {
+    margin: { top: '8mm', right: '10mm', bottom: '8mm', left: '10mm' },
+  });
   const s3Key = `invoices/${companyId}/annexure-${invoice.invoiceNumber}.pdf`;
   const s3Url = await uploadPdfToS3(pdfBuffer, s3Key);
   if (s3Url && s3Url !== invoice.annexurePdfPath) {
