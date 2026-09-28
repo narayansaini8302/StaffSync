@@ -209,7 +209,6 @@ function CreateRunModal({
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-15`;
   });
-  const [companyName, setCompanyName] = useState('Acme Pvt Ltd');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -218,7 +217,7 @@ function CreateRunModal({
     setBusy(true);
     setError(null);
     try {
-      await api.post('/api/payroll/runs', { periodStart, companyName });
+      await api.post('/api/payroll/runs', { periodStart });
       onSaved();
     } catch (e: any) {
       setError(e?.message ?? 'Payroll run failed');
@@ -244,17 +243,6 @@ function CreateRunModal({
             required
             value={periodStart}
             onChange={(e) => setPeriodStart(e.target.value)}
-            className="w-full px-3 py-2 rounded-lg bg-app border border-subtle text-fg text-sm focus:outline-none focus:border-brand"
-          />
-        </div>
-
-        <div>
-          <label className="block text-xs text-fg-2 mb-1">
-            Company name (for payslip)
-          </label>
-          <input
-            value={companyName}
-            onChange={(e) => setCompanyName(e.target.value)}
             className="w-full px-3 py-2 rounded-lg bg-app border border-subtle text-fg text-sm focus:outline-none focus:border-brand"
           />
         </div>
