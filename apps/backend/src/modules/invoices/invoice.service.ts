@@ -254,24 +254,31 @@ export async function computeInvoiceLines(
         employeeId: employee.id,
         companyId,
         date: { gte: periodStart, lte: periodEnd },
-        status: { in: ['PRESENT', 'HALF_DAY'] },
       },
     });
 
-    const totalMinutes = days.reduce((s, d) => s + d.totalMinutes, 0);
+    let totalMinutes = 0;
+    for (const d of days) {
+      if (d.status === 'PRESENT' || d.status === 'HALF_DAY') {
+        totalMinutes += d.totalMinutes;
+      } else if (d.status === 'LEAVE') {
+        // LEAVE is paid: do not deduct employee hours/money (credit 8h = 480m)
+        totalMinutes += d.totalMinutes > 0 ? d.totalMinutes : 480;
+      }
+      // ABSENT: 0 minutes, money is deducted
+    }
+
     let hoursWorked = round2(totalMinutes / 60);
 
     // If attendance was logged, use logged hours.
     // If no daily attendance records exist for this period yet,
-    // default to full month standard hours (208 hours = 26 days * 8h)
+    // default to full month standard hours (240 hours = 30 days * 8h)
     // so the employee's monthly contracted salary is accurately billed.
-    if (hoursWorked === 0) {
-      if (days.length === 0) {
-        hoursWorked = 208;
-      } else {
-        // Attendance was explicitly marked as ABSENT/LEAVE on all days
-        continue;
-      }
+    if (days.length === 0) {
+      hoursWorked = 240;
+    } else if (hoursWorked === 0) {
+      // Attendance was explicitly marked (e.g. absent on all days)
+      continue;
     }
 
     const category = (employee.category as EmployeeCategoryKey) || 'CUSTOM';
@@ -279,13 +286,13 @@ export async function computeInvoiceLines(
 
     // Rate per hour calculation:
     // 1. If standard category and client has explicit rate override: use client override
-    // 2. If employee has custom base salary: hourly rate = baseSalary / 208 hours (26 days * 8 hours)
+    // 2. If employee has custom base salary: hourly rate = baseSalary / 240 hours (30 days * 8 hours)
     // 3. Fallback to category default perHour rate
     let hourlyRate: number;
     if (category !== 'CUSTOM' && overrideMap.has(category)) {
       hourlyRate = overrideMap.get(category)!;
     } else if (employee.baseSalary && Number(employee.baseSalary) > 0) {
-      hourlyRate = round2(Number(employee.baseSalary) / 208);
+      hourlyRate = round2(Number(employee.baseSalary) / 240);
     } else {
       hourlyRate = catDef.perHour;
     }

@@ -700,7 +700,7 @@ function EmployeeFormModal({
             />
             <div className="text-[10px] text-muted mt-1">
               {form.category === 'CUSTOM'
-                ? `Enter monthly base salary for ${form.customCategory || 'custom role'}`
+                ? `Enter monthly base salary for ${form.customCategory || 'custom role'} • Hourly rate: ₹${((Number(form.baseSalary) || 0) / 240).toFixed(2)}/hr (based on 30 days × 8h)`
                 : `Auto-filled for ${categoryLabels[form.category as EmployeeCategory]}: ₹${categoryDefaults[form.category as EmployeeCategory]?.toLocaleString('en-IN')}`}
             </div>
           </div>

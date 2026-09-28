@@ -330,9 +330,9 @@ export async function markManualAttendance(
 
   const dayDate = parseDateOnly(input.date);
 
-  // Standard: Full Day = 8 hours (480 mins), Half Day = 4 hours (240 mins), Absent/Leave = 0 mins
+  // Standard: Full Day = 8 hours (480 mins), Half Day = 4 hours (240 mins), Leave = 8 hours (480 mins, paid leave), Absent = 0 mins (unpaid)
   let totalMinutes = 0;
-  if (input.status === 'PRESENT') {
+  if (input.status === 'PRESENT' || input.status === 'LEAVE') {
     totalMinutes = input.hours != null ? Math.round(input.hours * 60) : 480;
   } else if (input.status === 'HALF_DAY') {
     totalMinutes = input.hours != null ? Math.round(input.hours * 60) : 240;
@@ -342,7 +342,7 @@ export async function markManualAttendance(
 
   let firstIn: Date | null = null;
   let lastOut: Date | null = null;
-  if (input.status === 'PRESENT' || input.status === 'HALF_DAY') {
+  if (input.status === 'PRESENT' || input.status === 'HALF_DAY' || input.status === 'LEAVE') {
     firstIn = new Date(dayDate.getTime() + 9 * 3600000); // 09:00 UTC
     lastOut = new Date(firstIn.getTime() + totalMinutes * 60000);
   }
@@ -428,7 +428,7 @@ export async function markAllActiveEmployees(
   companyId: string,
   input: {
     date: string;
-    status: 'PRESENT' | 'HALF_DAY' | 'ABSENT';
+    status: 'PRESENT' | 'HALF_DAY' | 'ABSENT' | 'LEAVE';
     notes?: string;
   },
 ) {

@@ -188,10 +188,10 @@ function DailySheetView() {
 
     setSavingRows((prev) => ({ ...prev, [employeeId]: true }));
     try {
-      // Default: Full Day = 8h, Half Day = 4h, Absent/Leave = 0h
+      // Default: Full Day = 8h, Half Day = 4h, Absent = 0h, Leave = 8h (Paid leave)
       let hours = customHours;
       if (hours === undefined) {
-        if (status === 'PRESENT') hours = 8;
+        if (status === 'PRESENT' || status === 'LEAVE') hours = 8;
         else if (status === 'HALF_DAY') hours = 4;
         else hours = 0;
       }
@@ -211,7 +211,7 @@ function DailySheetView() {
           ? 'Half Day (4h)'
           : status === 'ABSENT'
           ? 'Absent (0h)'
-          : 'Leave';
+          : 'Leave (Paid 8h)';
 
       toast.success('Attendance updated', `Marked as ${label}`);
       invalidate();
@@ -247,7 +247,7 @@ function DailySheetView() {
       if (unassignedPrompt.pendingStatus) {
         let hours = unassignedPrompt.pendingHours;
         if (hours === undefined) {
-          if (unassignedPrompt.pendingStatus === 'PRESENT') hours = 8;
+          if (unassignedPrompt.pendingStatus === 'PRESENT' || unassignedPrompt.pendingStatus === 'LEAVE') hours = 8;
           else if (unassignedPrompt.pendingStatus === 'HALF_DAY') hours = 4;
           else hours = 0;
         }
@@ -641,16 +641,16 @@ function DailySheetView() {
 
                         {/* Leave */}
                         <button
-                          onClick={() => handleMarkAttendance(emp.id, 'LEAVE', 0)}
+                          onClick={() => handleMarkAttendance(emp.id, 'LEAVE', 8)}
                           disabled={isSaving}
                           className={`px-2.5 py-1.5 text-xs font-medium rounded-md transition flex items-center gap-1 ${
                             currentStatus === 'LEAVE'
                               ? 'bg-brand text-white font-semibold shadow-sm'
                               : 'text-fg-2 hover:text-fg hover:bg-hover'
                           }`}
-                          title="Approved Leave"
+                          title="Approved Paid Leave (8h)"
                         >
-                          Leave
+                          Leave (Paid)
                         </button>
                       </div>
                     </td>
@@ -1214,8 +1214,8 @@ function StatusBadge({ status }: { status: string }) {
       cls: 'bg-danger-soft text-danger border-danger/30 font-semibold',
     },
     LEAVE: {
-      label: 'Leave',
-      cls: 'bg-brand-soft text-brand border-brand/30',
+      label: 'Leave (Paid)',
+      cls: 'bg-brand-soft text-brand border-brand/30 font-semibold',
     },
     HOLIDAY: {
       label: 'Holiday',

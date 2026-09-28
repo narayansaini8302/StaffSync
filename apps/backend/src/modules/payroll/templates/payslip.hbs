@@ -112,15 +112,16 @@
     <div class="box">
       <div><strong>{{employeeName}}</strong></div>
       <div class="muted">Code: {{employeeCode}}</div>
-      <div class="muted">Email: {{email}}</div>
+      {{#if email}}<div class="muted">Email: {{email}}</div>{{/if}}
       <div class="muted">Category: {{category}}</div>
     </div>
     <div class="box">
       <div><strong>Attendance</strong></div>
       <div>Days present: {{presentDays}}</div>
+      {{#if leaveDays}}<div>Leave (paid): {{leaveDays}} days</div>{{/if}}
       <div>Half days: {{halfDays}}</div>
       <div>Absent: {{absentDays}} days</div>
-      <div>Hours worked: <strong>{{totalHours}} h</strong></div>
+      <div>Hours worked/paid: <strong>{{totalHours}} h</strong></div>
     </div>
   </div>
 

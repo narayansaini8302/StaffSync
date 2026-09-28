@@ -39,6 +39,7 @@ export interface ComputedPayslip {
   presentDays: number;
   absentDays: number;
   halfDays: number;
+  leaveDays?: number;
   overtimeMins: number;
   lateMins: number;
 
@@ -77,20 +78,35 @@ export async function computePayslipForEmployee(
   let presentDays = 0;
   let halfDays = 0;
   let absentDays = 0;
+  let leaveDays = 0;
   let totalMinutes = 0;
   let overtimeMins = 0;
   let lateMins = 0;
 
   for (const d of days) {
-    if (d.status === 'PRESENT') presentDays += 1;
-    else if (d.status === 'HALF_DAY') halfDays += 1;
-    else if (d.status === 'ABSENT') absentDays += 1;
-    totalMinutes += d.totalMinutes;
+    if (d.status === 'PRESENT') {
+      presentDays += 1;
+      totalMinutes += d.totalMinutes;
+    } else if (d.status === 'HALF_DAY') {
+      halfDays += 1;
+      totalMinutes += d.totalMinutes;
+    } else if (d.status === 'ABSENT') {
+      absentDays += 1;
+      // ABSENT: unpaid, 0 minutes (deducts money)
+    } else if (d.status === 'LEAVE') {
+      leaveDays += 1;
+      // LEAVE: paid leave, do NOT deduct money (credit 8 hours = 480 mins)
+      totalMinutes += d.totalMinutes > 0 ? d.totalMinutes : 480;
+    }
     overtimeMins += d.overtimeMins;
     lateMins += d.lateMins;
   }
 
-  const totalHours = totalMinutes / 60;
+  let totalHours = totalMinutes / 60;
+  if (days.length === 0) {
+    totalHours = payrollConfig.daysInMonth * payrollConfig.standardHoursPerDay;
+    presentDays = payrollConfig.daysInMonth;
+  }
   const category = (employee.category as EmployeeCategoryKey) || 'HOUSEKEEPING';
   const catDef = categoryDefaults[category] || categoryDefaults.HOUSEKEEPING;
   const hourlyRate =
@@ -157,6 +173,7 @@ export async function computePayslipForEmployee(
     presentDays,
     absentDays,
     halfDays,
+    leaveDays,
     overtimeMins,
     lateMins,
     grossPay,
@@ -204,6 +221,7 @@ async function renderPayslipPdf(input: {
     presentDays: input.slip.presentDays,
     halfDays: input.slip.halfDays,
     absentDays: input.slip.absentDays,
+    leaveDays: input.slip.leaveDays || 0,
     earnings: input.slip.earnings.map((e) => ({ label: e.label, amount: fmt(e.amount) })),
     deductions: input.slip.deductions.map((d) => ({ label: d.label, amount: fmt(d.amount) })),
     grossPay: fmt(input.slip.grossPay),
@@ -464,12 +482,32 @@ export async function regeneratePayslipPdf(
       date: { gte: slip.periodStart, lte: slip.periodEnd },
     },
   });
-  const totalMinutes = days.reduce((s, d) => s + d.totalMinutes, 0);
-  const totalHours = totalMinutes / 60;
+  let totalMinutes = 0;
+  let presentDays = 0;
+  let halfDays = 0;
+  let absentDays = 0;
+  let leaveDays = 0;
 
-  const presentDays = days.filter((d) => d.status === 'PRESENT').length;
-  const halfDays = days.filter((d) => d.status === 'HALF_DAY').length;
-  const absentDays = days.filter((d) => d.status === 'ABSENT').length;
+  for (const d of days) {
+    if (d.status === 'PRESENT') {
+      presentDays += 1;
+      totalMinutes += d.totalMinutes;
+    } else if (d.status === 'HALF_DAY') {
+      halfDays += 1;
+      totalMinutes += d.totalMinutes;
+    } else if (d.status === 'ABSENT') {
+      absentDays += 1;
+    } else if (d.status === 'LEAVE') {
+      leaveDays += 1;
+      totalMinutes += d.totalMinutes > 0 ? d.totalMinutes : 480;
+    }
+  }
+
+  let totalHours = totalMinutes / 60;
+  if (days.length === 0) {
+    totalHours = payrollConfig.daysInMonth * payrollConfig.standardHoursPerDay;
+    presentDays = payrollConfig.daysInMonth;
+  }
 
   const earnings = slip.lineItems
     .filter((i) => i.category === 'EARNING')
@@ -490,6 +528,7 @@ export async function regeneratePayslipPdf(
     presentDays,
     absentDays,
     halfDays,
+    leaveDays,
     overtimeMins: slip.overtimeMins,
     lateMins: slip.lateMins,
     grossPay: Number(slip.grossPay),

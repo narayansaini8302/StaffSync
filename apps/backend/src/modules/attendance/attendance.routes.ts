@@ -114,7 +114,7 @@ const bulkAttendanceSchema = z.object({
 
 const quickAllSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD'),
-  status: z.enum(['PRESENT', 'HALF_DAY', 'ABSENT']),
+  status: z.enum(['PRESENT', 'HALF_DAY', 'ABSENT', 'LEAVE']),
   notes: z.string().optional(),
 });
 

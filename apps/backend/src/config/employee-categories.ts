@@ -54,10 +54,10 @@ export const categoryDefaults: Record<EmployeeCategoryKey, CategoryDefaults> = {
   },
   CUSTOM: {
     label: 'Custom',
-    basic: 7410,
-    gross: 16366,
-    perDay: 629.47,
-    perHour: 78.68,
+    basic: 7500,
+    gross: 15000,
+    perDay: 500,
+    perHour: 62.50,
   },
 };
 
