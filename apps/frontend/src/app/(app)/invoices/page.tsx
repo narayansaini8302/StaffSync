@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Plus,
@@ -1000,13 +1000,12 @@ function InvoiceDetailsModal({
             </div>
             <div className="w-full h-3 bg-surface rounded-full overflow-hidden border border-subtle">
               <div
-                className={`h-full transition-all duration-500 ${
-                  percentPaid >= 100
+                className={`h-full transition-all duration-500 ${percentPaid >= 100
                     ? 'bg-success'
                     : percentPaid > 0
-                    ? 'bg-warning'
-                    : 'bg-muted'
-                }`}
+                      ? 'bg-warning'
+                      : 'bg-muted'
+                  }`}
                 style={{ width: `${percentPaid}%` }}
               />
             </div>
@@ -1043,55 +1042,55 @@ function InvoiceDetailsModal({
             <div className="border border-subtle rounded-xl overflow-hidden bg-surface">
               <div className="overflow-x-auto w-full">
                 <table className="w-full text-xs min-w-[560px]">
-                <thead className="bg-elevated/50 border-b border-subtle">
-                  <tr className="text-fg-2 text-left">
-                    <th className="px-3 py-2 font-medium">Date</th>
-                    <th className="px-3 py-2 font-medium">Payment Mode</th>
-                    <th className="px-3 py-2 font-medium">Reference / UTR</th>
-                    <th className="px-3 py-2 font-medium">Remarks</th>
-                    <th className="px-3 py-2 font-medium text-right">Amount</th>
-                    <th className="px-3 py-2 font-medium text-right">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-subtle">
-                  {(!detail.payments || detail.payments.length === 0) && (
-                    <tr>
-                      <td colSpan={6} className="px-3 py-6 text-center text-muted italic">
-                        No payments recorded yet for this invoice.
-                      </td>
+                  <thead className="bg-elevated/50 border-b border-subtle">
+                    <tr className="text-fg-2 text-left">
+                      <th className="px-3 py-2 font-medium">Date</th>
+                      <th className="px-3 py-2 font-medium">Payment Mode</th>
+                      <th className="px-3 py-2 font-medium">Reference / UTR</th>
+                      <th className="px-3 py-2 font-medium">Remarks</th>
+                      <th className="px-3 py-2 font-medium text-right">Amount</th>
+                      <th className="px-3 py-2 font-medium text-right">Action</th>
                     </tr>
-                  )}
-                  {detail.payments?.map((pmt) => (
-                    <tr key={pmt.id} className="hover:bg-hover transition-colors">
-                      <td className="px-3 py-2 font-mono text-fg-2">
-                        {pmt.paymentDate.slice(0, 10)}
-                      </td>
-                      <td className="px-3 py-2 text-fg font-medium">
-                        <span className="px-1.5 py-0.5 rounded bg-elevated border border-subtle text-[11px]">
-                          {pmt.paymentMode.replace('_', ' ')}
-                        </span>
-                      </td>
-                      <td className="px-3 py-2 font-mono text-fg-2">
-                        {pmt.reference || '—'}
-                      </td>
-                      <td className="px-3 py-2 text-fg-2">{pmt.notes || '—'}</td>
-                      <td className="px-3 py-2 text-right font-mono font-semibold text-success">
-                        {formatMoney(pmt.amount)}
-                      </td>
-                      <td className="px-3 py-2 text-right">
-                        <button
-                          onClick={() => handleDeletePayment(pmt.id, pmt.amount)}
-                          disabled={deletingPaymentId === pmt.id}
-                          className="p-1 rounded text-muted hover:text-danger hover:bg-hover transition disabled:opacity-50"
-                          title="Delete this payment"
-                        >
-                          <Trash2 size={13} />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-subtle">
+                    {(!detail.payments || detail.payments.length === 0) && (
+                      <tr>
+                        <td colSpan={6} className="px-3 py-6 text-center text-muted italic">
+                          No payments recorded yet for this invoice.
+                        </td>
+                      </tr>
+                    )}
+                    {detail.payments?.map((pmt) => (
+                      <tr key={pmt.id} className="hover:bg-hover transition-colors">
+                        <td className="px-3 py-2 font-mono text-fg-2">
+                          {pmt.paymentDate.slice(0, 10)}
+                        </td>
+                        <td className="px-3 py-2 text-fg font-medium">
+                          <span className="px-1.5 py-0.5 rounded bg-elevated border border-subtle text-[11px]">
+                            {pmt.paymentMode.replace('_', ' ')}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2 font-mono text-fg-2">
+                          {pmt.reference || '—'}
+                        </td>
+                        <td className="px-3 py-2 text-fg-2">{pmt.notes || '—'}</td>
+                        <td className="px-3 py-2 text-right font-mono font-semibold text-success">
+                          {formatMoney(pmt.amount)}
+                        </td>
+                        <td className="px-3 py-2 text-right">
+                          <button
+                            onClick={() => handleDeletePayment(pmt.id, pmt.amount)}
+                            disabled={deletingPaymentId === pmt.id}
+                            className="p-1 rounded text-muted hover:text-danger hover:bg-hover transition disabled:opacity-50"
+                            title="Delete this payment"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
@@ -1105,41 +1104,41 @@ function InvoiceDetailsModal({
             <div className="border border-subtle rounded-xl overflow-hidden bg-surface max-h-60 overflow-y-auto">
               <div className="overflow-x-auto w-full">
                 <table className="w-full text-xs min-w-[560px]">
-                <thead className="bg-elevated/50 border-b border-subtle sticky top-0">
-                  <tr className="text-fg-2 text-left">
-                    <th className="px-3 py-2 font-medium">Code</th>
-                    <th className="px-3 py-2 font-medium">Employee</th>
-                    <th className="px-3 py-2 font-medium">Category</th>
-                    <th className="px-3 py-2 font-medium text-right">Hours Worked</th>
-                    <th className="px-3 py-2 font-medium text-right">Hourly Rate</th>
-                    <th className="px-3 py-2 font-medium text-right">Amount</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-subtle">
-                  {detail.lineItems?.map((li: any) => (
-                    <tr key={li.id} className="hover:bg-hover">
-                      <td className="px-3 py-2 font-mono text-fg-2">
-                        {li.employeeCode}
-                      </td>
-                      <td className="px-3 py-2 text-fg font-medium">
-                        {li.employeeName}
-                      </td>
-                      <td className="px-3 py-2 text-fg-2">
-                        {categoryLabels[li.category as EmployeeCategory] || li.category}
-                      </td>
-                      <td className="px-3 py-2 text-right text-fg font-mono">
-                        {Number(li.hoursWorked).toFixed(2)}h
-                      </td>
-                      <td className="px-3 py-2 text-right font-mono text-fg-2">
-                        {formatMoney(li.hourlyRate)}
-                      </td>
-                      <td className="px-3 py-2 text-right font-mono font-semibold text-fg">
-                        {formatMoney(li.amount)}
-                      </td>
+                  <thead className="bg-elevated/50 border-b border-subtle sticky top-0">
+                    <tr className="text-fg-2 text-left">
+                      <th className="px-3 py-2 font-medium">Code</th>
+                      <th className="px-3 py-2 font-medium">Employee</th>
+                      <th className="px-3 py-2 font-medium">Category</th>
+                      <th className="px-3 py-2 font-medium text-right">Hours Worked</th>
+                      <th className="px-3 py-2 font-medium text-right">Hourly Rate</th>
+                      <th className="px-3 py-2 font-medium text-right">Amount</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-subtle">
+                    {detail.lineItems?.map((li: any) => (
+                      <tr key={li.id} className="hover:bg-hover">
+                        <td className="px-3 py-2 font-mono text-fg-2">
+                          {li.employeeCode}
+                        </td>
+                        <td className="px-3 py-2 text-fg font-medium">
+                          {li.employeeName}
+                        </td>
+                        <td className="px-3 py-2 text-fg-2">
+                          {categoryLabels[li.category as EmployeeCategory] || li.category}
+                        </td>
+                        <td className="px-3 py-2 text-right text-fg font-mono">
+                          {Number(li.hoursWorked).toFixed(2)}h
+                        </td>
+                        <td className="px-3 py-2 text-right font-mono text-fg-2">
+                          {formatMoney(li.hourlyRate)}
+                        </td>
+                        <td className="px-3 py-2 text-right font-mono font-semibold text-fg">
+                          {formatMoney(li.amount)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
@@ -1237,9 +1236,8 @@ function Row({
     <div className="flex justify-between items-center">
       <span className={bold ? 'font-semibold text-fg' : 'text-fg-2'}>{label}</span>
       <span
-        className={`font-mono ${
-          cls ? cls : bold ? 'font-semibold text-fg' : 'text-fg'
-        }`}
+        className={`font-mono ${cls ? cls : bold ? 'font-semibold text-fg' : 'text-fg'
+          }`}
       >
         {value}
       </span>
@@ -1284,9 +1282,7 @@ function GenerateInvoiceModal({
   });
   const clients = clientsQuery.data?.data ?? [];
 
-  const [lastOpen, setLastOpen] = useState(false);
-  if (open !== lastOpen) {
-    setLastOpen(open);
+  useEffect(() => {
     if (open) {
       setError(null);
       setClientId(clients[0]?.id ?? '');
@@ -1294,7 +1290,7 @@ function GenerateInvoiceModal({
       const rand = Math.floor(1000 + Math.random() * 9000);
       setInvoiceNumber(`INV-${year}-${rand}`);
     }
-  }
+  }, [open, clients]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1704,11 +1700,16 @@ function InvoiceGeneratorSection({
 
   // Form State
   const [invoiceTitle, setInvoiceTitle] = useState('GENERAL INVOICE');
-  const [invoiceNumber, setInvoiceNumber] = useState(() => {
+  const [customInvoiceNumber, setCustomInvoiceNumber] = useState<string | null>(null);
+  const [defaultNumberSeed, setDefaultNumberSeed] = useState(() => {
     const year = new Date().getFullYear();
     const rand = Math.floor(1000 + Math.random() * 9000);
-    return `GEN-${year}-${rand}`;
+    return `${year}-${rand}`;
   });
+  const defaultInvoiceNumber = `${company?.invoicePrefix?.trim() || 'GEN'}-${defaultNumberSeed}`;
+  const invoiceNumber = customInvoiceNumber !== null ? customInvoiceNumber : defaultInvoiceNumber;
+  const setInvoiceNumber = (val: string) => setCustomInvoiceNumber(val);
+
   const [issuedAt, setIssuedAt] = useState(() =>
     new Date().toISOString().slice(0, 10),
   );
@@ -1736,11 +1737,20 @@ function InvoiceGeneratorSection({
   const [clientEmail, setClientEmail] = useState('');
   const [clientPhone, setClientPhone] = useState('');
 
-  // GST & Terms State
+  const buildDefaultNotes = (c?: Company | null) => {
+    const bankDetails =
+      c?.bankName && c?.bankAccount
+        ? `\n3. Remittance: Make payments via NEFT/RTGS to ${c.bankName}, A/C: ${c.bankAccount}${c.bankIfsc ? `, IFSC: ${c.bankIfsc}` : ''}.`
+        : '\n3. Make all payments via NEFT/RTGS to the company bank account.';
+    return `1. Payment is due within 15 days of invoice date.\n2. Please mention the invoice number on your remittance advice.${bankDetails}`;
+  };
+
+  // GST & Terms State (auto-derived from company bank details, with editable override)
   const [gstMode, setGstMode] = useState<'auto' | 'cgst_sgst' | 'igst' | 'none'>('auto');
-  const [notes, setNotes] = useState(
-    '1. Payment is due within 15 days of invoice date.\n2. Please mention the invoice number on your remittance advice.\n3. Make all payments via NEFT/RTGS to the company bank account.',
-  );
+  const [customNotes, setCustomNotes] = useState<string | null>(null);
+  const defaultNotes = buildDefaultNotes(company);
+  const notes = customNotes !== null ? customNotes : defaultNotes;
+  const setNotes = (val: string) => setCustomNotes(val);
 
   // Manual Line Items State
   const [items, setItems] = useState<ManualLineItem[]>([
@@ -1803,8 +1813,10 @@ function InvoiceGeneratorSection({
   const resetForm = () => {
     const year = new Date().getFullYear();
     const rand = Math.floor(1000 + Math.random() * 9000);
+    const prefix = company?.invoicePrefix?.trim() || 'GEN';
     setInvoiceTitle('GENERAL INVOICE');
-    setInvoiceNumber(`GEN-${year}-${rand}`);
+    setDefaultNumberSeed(`${year}-${rand}`);
+    setCustomInvoiceNumber(`${prefix}-${year}-${rand}`);
     setIssuedAt(new Date().toISOString().slice(0, 10));
     const d = new Date();
     d.setDate(d.getDate() + 15);
@@ -1817,6 +1829,7 @@ function InvoiceGeneratorSection({
     setClientEmail('');
     setClientPhone('');
     setGstMode('auto');
+    setCustomNotes(null);
     setItems([
       {
         id: `item-${Date.now()}`,
@@ -1924,7 +1937,8 @@ function InvoiceGeneratorSection({
       // Generate next invoice number for next generation
       const year = new Date().getFullYear();
       const rand = Math.floor(1000 + Math.random() * 9000);
-      setInvoiceNumber(`GEN-${year}-${rand}`);
+      const prefix = company?.invoicePrefix?.trim() || 'GEN';
+      setInvoiceNumber(`${prefix}-${year}-${rand}`);
     } catch (err: any) {
       setError(err?.message ?? 'Failed to create general invoice');
     } finally {
@@ -1948,7 +1962,7 @@ function InvoiceGeneratorSection({
               </span>
             </div>
             <p className="text-xs text-muted mt-0.5">
-              Create manual general invoices with automated calculations and client details. Company and bank details are automatically applied from your company profile.
+              Create manual general invoices. Company profile and bank remittance details are automatically detected from your account settings.
             </p>
           </div>
         </div>
@@ -2077,14 +2091,19 @@ function InvoiceGeneratorSection({
           </div>
         </div>
 
-        {/* Row 2: Client Details (Editable) */}
+        {/* Client Details (Buyer / Billed To) - Fully Editable */}
         <div className="bg-elevated/40 border border-subtle rounded-xl p-4 sm:p-5 space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-subtle">
             <div className="flex items-center gap-2">
               <User size={16} className="text-brand" />
-              <h3 className="text-xs font-bold text-fg uppercase tracking-wider">
-                Client Details (Billed To / Buyer)
-              </h3>
+              <div>
+                <h3 className="text-xs font-bold text-fg uppercase tracking-wider">
+                  Client Details (Billed To / Buyer)
+                </h3>
+                <p className="text-[11px] text-muted">
+                  Biller company details are automatically applied from your Company Profile.
+                </p>
+              </div>
             </div>
 
             {/* Quick Select Client Dropdown */}
@@ -2092,7 +2111,7 @@ function InvoiceGeneratorSection({
               <select
                 value={selectedClientId}
                 onChange={(e) => handleClientSelect(e.target.value)}
-                className="w-full sm:w-auto px-3 py-1.5 rounded-lg bg-surface border border-subtle text-fg text-xs focus:outline-none focus:border-brand"
+                className="w-full sm:w-auto px-2.5 py-1 rounded-lg bg-surface border border-subtle text-fg text-xs focus:outline-none focus:border-brand"
               >
                 <option value="">— Select Saved Client (Auto-fill) —</option>
                 {clients.map((c) => (
@@ -2104,8 +2123,8 @@ function InvoiceGeneratorSection({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
-            <div className="sm:col-span-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+            <div className="md:col-span-2">
               <label className="block text-[11px] font-medium text-fg-2 mb-1">
                 Client / Organization Name <span className="text-danger">*</span>
               </label>
@@ -2115,7 +2134,20 @@ function InvoiceGeneratorSection({
                 value={clientName}
                 onChange={(e) => setClientName(e.target.value)}
                 placeholder="e.g. Global Tech Solutions Ltd"
-                className="w-full px-3 py-2 rounded-lg bg-surface border border-subtle text-fg font-medium focus:outline-none focus:border-brand"
+                className="w-full px-3 py-1.5 rounded-lg bg-surface border border-subtle text-fg font-medium focus:outline-none focus:border-brand"
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-[11px] font-medium text-fg-2 mb-1">
+                Client Billing Address
+              </label>
+              <textarea
+                rows={2}
+                value={clientAddress}
+                onChange={(e) => setClientAddress(e.target.value)}
+                placeholder="Suite No., Building, City, State, PIN"
+                className="w-full px-3 py-1.5 rounded-lg bg-surface border border-subtle text-fg focus:outline-none focus:border-brand resize-none"
               />
             </div>
 
@@ -2128,20 +2160,7 @@ function InvoiceGeneratorSection({
                 value={clientGstin}
                 onChange={(e) => setClientGstin(e.target.value.toUpperCase())}
                 placeholder="27BBBBB1111B2Z6"
-                className="w-full px-3 py-2 rounded-lg bg-surface border border-subtle text-fg font-mono uppercase focus:outline-none focus:border-brand"
-              />
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className="block text-[11px] font-medium text-fg-2 mb-1">
-                Client Billing Address
-              </label>
-              <input
-                type="text"
-                value={clientAddress}
-                onChange={(e) => setClientAddress(e.target.value)}
-                placeholder="Suite No., Building, City, State, PIN"
-                className="w-full px-3 py-2 rounded-lg bg-surface border border-subtle text-fg focus:outline-none focus:border-brand"
+                className="w-full px-3 py-1.5 rounded-lg bg-surface border border-subtle text-fg font-mono uppercase focus:outline-none focus:border-brand"
               />
             </div>
 
@@ -2154,7 +2173,7 @@ function InvoiceGeneratorSection({
                 value={clientStateCode}
                 onChange={(e) => setClientStateCode(e.target.value)}
                 placeholder="e.g. 27 or 08"
-                className="w-full px-3 py-2 rounded-lg bg-surface border border-subtle text-fg font-mono focus:outline-none focus:border-brand"
+                className="w-full px-3 py-1.5 rounded-lg bg-surface border border-subtle text-fg font-mono focus:outline-none focus:border-brand"
               />
             </div>
 
@@ -2167,7 +2186,7 @@ function InvoiceGeneratorSection({
                 value={clientEmail}
                 onChange={(e) => setClientEmail(e.target.value)}
                 placeholder="accounts@client.com"
-                className="w-full px-3 py-2 rounded-lg bg-surface border border-subtle text-fg focus:outline-none focus:border-brand"
+                className="w-full px-3 py-1.5 rounded-lg bg-surface border border-subtle text-fg focus:outline-none focus:border-brand"
               />
             </div>
 
@@ -2180,7 +2199,7 @@ function InvoiceGeneratorSection({
                 value={clientPhone}
                 onChange={(e) => setClientPhone(e.target.value)}
                 placeholder="+91 9123456780"
-                className="w-full px-3 py-2 rounded-lg bg-surface border border-subtle text-fg focus:outline-none focus:border-brand"
+                className="w-full px-3 py-1.5 rounded-lg bg-surface border border-subtle text-fg focus:outline-none focus:border-brand"
               />
             </div>
           </div>
@@ -2206,11 +2225,10 @@ function InvoiceGeneratorSection({
                 key={mode.id}
                 type="button"
                 onClick={() => setGstMode(mode.id as any)}
-                className={`px-3 py-1.5 rounded-lg font-medium border text-center transition ${
-                  gstMode === mode.id
+                className={`px-3 py-1.5 rounded-lg font-medium border text-center transition ${gstMode === mode.id
                     ? 'bg-brand text-white border-brand shadow-sm'
                     : 'bg-surface text-fg-2 border-subtle hover:bg-hover'
-                }`}
+                  }`}
               >
                 {mode.label}
               </button>
@@ -2416,32 +2434,29 @@ function InvoiceGeneratorSection({
           </div>
         </div>
 
-        {/* Row 5: Terms & Notes and Automated Calculations (2-Column Grid) */}
+        {/* Row 5: Terms & Remarks & Automated Calculations (2-Column Grid) */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Notes & Terms */}
-          <div className="bg-elevated/40 border border-subtle rounded-xl p-5 text-xs flex flex-col justify-between space-y-4">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between pb-3 border-b border-subtle">
-                <label className="font-bold text-fg uppercase tracking-wider text-xs flex items-center gap-2">
-                  <FileText size={15} className="text-brand" /> Terms & Conditions / Remarks
+          <div className="bg-elevated/40 border border-subtle rounded-xl p-4 sm:p-5 flex flex-col justify-between space-y-3">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between pb-2 border-b border-subtle">
+                <label className="block text-xs font-bold text-fg uppercase tracking-wider">
+                  Terms & Conditions / Remarks
                 </label>
-                <span className="text-[10px] text-muted bg-surface px-2 py-0.5 rounded border border-subtle">
-                  Optional
+                <span className="text-[10px] text-brand bg-brand/10 font-semibold px-2 py-0.5 rounded border border-brand/20">
+                  Bank & Remittance Auto-detected
                 </span>
               </div>
-              <p className="text-[11px] text-muted leading-relaxed">
-                Add payment terms, remittance references, or remarks to display on the invoice.
-              </p>
               <textarea
                 rows={6}
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="Payment terms, remittance reference, etc."
-                className="w-full p-3 rounded-lg bg-surface border border-subtle text-fg text-xs focus:outline-none focus:border-brand resize-none leading-relaxed"
+                className="w-full px-3 py-2 rounded-lg bg-surface border border-subtle text-fg text-xs focus:outline-none focus:border-brand resize-none leading-relaxed"
               />
             </div>
-            <div className="text-[11px] text-muted pt-3 border-t border-subtle flex items-center justify-between">
-              <span>Company & bank remittance details are automatically included from your company profile.</span>
+            <div className="p-2.5 rounded-lg bg-surface/70 border border-subtle text-[11px] text-muted">
+              Company profile and bank remittance details are automatically detected from your account settings and included in the invoice PDF and ledger.
             </div>
           </div>
 
