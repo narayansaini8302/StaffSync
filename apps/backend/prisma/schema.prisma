@@ -271,7 +271,7 @@ model Payslip {
   employeeId      String
   employeeCode    String
   employeeName    String
-  email           String
+  email           String?
 
   periodStart     DateTime   @db.Date
   periodEnd       DateTime   @db.Date

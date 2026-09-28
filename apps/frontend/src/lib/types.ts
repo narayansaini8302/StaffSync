@@ -194,7 +194,7 @@ export interface Payslip {
   employeeId: string;
   employeeCode: string;
   employeeName: string;
-  email: string;
+  email?: string | null;
   periodStart: string;
   periodEnd: string;
   presentDays: string | number;

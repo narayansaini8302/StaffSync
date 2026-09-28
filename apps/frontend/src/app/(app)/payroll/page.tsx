@@ -13,6 +13,7 @@ import {
   Clock,
   Mail,
   Send,
+  Trash2,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { PayrollRun, Payslip } from '@/lib/types';
@@ -37,6 +38,21 @@ export default function PayrollPage() {
   const qc = useQueryClient();
   const [creating, setCreating] = useState(false);
   const [viewingRun, setViewingRun] = useState<PayrollRun | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const deleteRun = async (run: PayrollRun) => {
+    if (!confirm(`Are you sure you want to delete the payroll run for ${monthLabel(run.periodStart)}?`)) return;
+    setDeletingId(run.id);
+    try {
+      await api.delete(`/api/payroll/runs/${run.id}`);
+      toast.success(`Deleted payroll run for ${monthLabel(run.periodStart)}`);
+      qc.invalidateQueries({ queryKey: ['payroll-runs'] });
+    } catch (e: any) {
+      toast.error('Failed to delete run', e?.message);
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const runsQuery = useQuery({
     queryKey: ['payroll-runs'],
@@ -122,13 +138,27 @@ export default function PayrollPage() {
                   {formatMoney(run.totalNet)}
                 </td>
                 <td className="px-4 py-3 text-right">
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => setViewingRun(run)}
-                  >
-                    View payslips
-                  </Button>
+                  <div className="flex items-center justify-end gap-2">
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => setViewingRun(run)}
+                    >
+                      View payslips
+                    </Button>
+                    <button
+                      onClick={() => deleteRun(run)}
+                      disabled={deletingId === run.id}
+                      className="p-1.5 rounded hover:bg-danger/10 text-fg-2 hover:text-danger disabled:opacity-50 transition-colors"
+                      title="Delete payroll run"
+                    >
+                      {deletingId === run.id ? (
+                        <Loader2 size={16} className="animate-spin text-danger" />
+                      ) : (
+                        <Trash2 size={16} />
+                      )}
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}

@@ -12,6 +12,7 @@ import {
   getPayrollRunWithPayslips,
   sendPayslipEmail,
   sendPayrollRunEmails,
+  deletePayrollRun,
 } from './payroll.service';
 
 export const payrollRouter = Router();
@@ -69,6 +70,17 @@ payrollRouter.get('/runs/:id', async (req, res) => {
   const run = await getPayrollRunWithPayslips(req.user!.companyId, String(req.params.id));
   if (!run) return res.status(404).json({ error: 'Run not found' });
   res.json(run);
+});
+
+payrollRouter.delete('/runs/:id', requireRole('ADMIN'), async (req, res) => {
+  try {
+    await deletePayrollRun(req.user!.companyId, String(req.params.id));
+    res.json({ success: true });
+  } catch (e: any) {
+    if (e.message === 'RUN_NOT_FOUND') return res.status(404).json({ error: 'Run not found' });
+    console.error(e);
+    res.status(500).json({ error: 'Failed to delete payroll run', detail: e.message });
+  }
 });
 
 // ---------------------------------------------------------------------------

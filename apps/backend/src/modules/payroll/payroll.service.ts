@@ -227,7 +227,12 @@ export async function createPayrollRun(companyId: string, periodStartInput: stri
   const existing = await prisma.payrollRun.findUnique({
     where: { companyId_periodStart_periodEnd: { companyId, periodStart, periodEnd } },
   });
-  if (existing) throw new Error('RUN_EXISTS');
+  if (existing) {
+    if (existing.status === 'DRAFT') {
+      return existing;
+    }
+    throw new Error('RUN_EXISTS');
+  }
 
   return prisma.payrollRun.create({
     data: { companyId, periodStart, periodEnd, status: 'DRAFT' },
@@ -247,6 +252,11 @@ export async function processPayrollRun(
 
   const employees = await prisma.employee.findMany({
     where: { companyId, isActive: true },
+  });
+
+  // Clear any existing payslips for this draft run to safely allow retrying
+  await prisma.payslip.deleteMany({
+    where: { payrollRunId: run.id },
   });
 
   let totalGross = 0;
@@ -288,7 +298,7 @@ export async function processPayrollRun(
         employeeId: slip.employeeId,
         employeeCode: slip.employeeCode,
         employeeName: slip.employeeName,
-        email: slip.email,
+        email: slip.email || null,
         periodStart: run.periodStart,
         periodEnd: run.periodEnd,
         pdfPath: s3Url,
@@ -320,43 +330,45 @@ export async function processPayrollRun(
       },
     });
 
-    try {
-      await sendMail({
-        to: slip.email,
-        subject: 'Payslip for ' + run.periodStart.toISOString().slice(0, 7),
-        html:
-          '<p>Hi ' +
-          slip.employeeName +
-          ',</p>' +
-          '<p>Your payslip for the period ' +
-          run.periodStart.toISOString().slice(0, 10) +
-          ' to ' +
-          run.periodEnd.toISOString().slice(0, 10) +
-          ' is attached.</p>' +
-          '<p>Net Pay: <strong>' +
-          fmt(slip.netPay) +
-          ' ' +
-          payrollConfig.currency +
-          '</strong></p>' +
-          '<p>- Attendance System</p>',
-        attachments: [
-          {
-            filename:
-              'payslip-' +
-              slip.employeeCode +
-              '-' +
-              run.periodStart.toISOString().slice(0, 7) +
-              '.pdf',
-            content: pdfBuffer,
-          },
-        ],
-      });
-      await prisma.payslip.update({
-        where: { id: payslipRow.id },
-        data: { emailedAt: new Date() },
-      });
-    } catch (err) {
-      console.error('Failed to email payslip for ' + slip.email + ':', err);
+    if (slip.email && slip.email.includes('@')) {
+      try {
+        await sendMail({
+          to: slip.email,
+          subject: 'Payslip for ' + run.periodStart.toISOString().slice(0, 7),
+          html:
+            '<p>Hi ' +
+            slip.employeeName +
+            ',</p>' +
+            '<p>Your payslip for the period ' +
+            run.periodStart.toISOString().slice(0, 10) +
+            ' to ' +
+            run.periodEnd.toISOString().slice(0, 10) +
+            ' is attached.</p>' +
+            '<p>Net Pay: <strong>' +
+            fmt(slip.netPay) +
+            ' ' +
+            payrollConfig.currency +
+            '</strong></p>' +
+            '<p>- Attendance System</p>',
+          attachments: [
+            {
+              filename:
+                'payslip-' +
+                slip.employeeCode +
+                '-' +
+                run.periodStart.toISOString().slice(0, 7) +
+                '.pdf',
+              content: pdfBuffer,
+            },
+          ],
+        });
+        await prisma.payslip.update({
+          where: { id: payslipRow.id },
+          data: { emailedAt: new Date() },
+        });
+      } catch (err) {
+        console.error('Failed to email payslip for ' + slip.email + ':', err);
+      }
     }
 
     totalGross += slip.grossPay;
@@ -660,5 +672,16 @@ export async function sendPayrollRunEmails(companyId: string, runId: string) {
       })),
     ],
   };
+}
+
+export async function deletePayrollRun(companyId: string, runId: string) {
+  const run = await prisma.payrollRun.findFirst({
+    where: { id: runId, companyId },
+  });
+  if (!run) throw new Error('RUN_NOT_FOUND');
+  await prisma.payrollRun.delete({
+    where: { id: runId },
+  });
+  return true;
 }
 
