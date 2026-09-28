@@ -12,7 +12,8 @@ export type EmployeeCategoryKey =
   | 'HOUSEKEEPING'
   | 'SEMI_SKILLED'
   | 'SECURITY_GUARD'
-  | 'SUPERVISOR';
+  | 'SUPERVISOR'
+  | 'CUSTOM';
 
 export interface CategoryDefaults {
   label: string;
@@ -50,6 +51,13 @@ export const categoryDefaults: Record<EmployeeCategoryKey, CategoryDefaults> = {
     gross: 26219,
     perDay: 1008.41,
     perHour: 126.05,
+  },
+  CUSTOM: {
+    label: 'Custom',
+    basic: 7410,
+    gross: 16366,
+    perDay: 629.47,
+    perHour: 78.68,
   },
 };
 

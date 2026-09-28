@@ -97,6 +97,7 @@ enum EmployeeCategory {
   SEMI_SKILLED
   SECURITY_GUARD
   SUPERVISOR
+  CUSTOM
 }
 
 model Employee {
@@ -106,9 +107,13 @@ model Employee {
   lastName       String
   email          String
   phone          String?
+  gender         String?
   address        String?
   fatherName     String?
   category       EmployeeCategory @default(HOUSEKEEPING)
+  customCategory String?
+  pfApplicable   Boolean          @default(true)
+  esiApplicable  Boolean          @default(true)
   department     String?
   designation    String?
   employmentType EmploymentType   @default(FULL_TIME)

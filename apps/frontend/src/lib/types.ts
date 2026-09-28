@@ -7,7 +7,8 @@ export type EmployeeCategory =
   | 'HOUSEKEEPING'
   | 'SEMI_SKILLED'
   | 'SECURITY_GUARD'
-  | 'SUPERVISOR';
+  | 'SUPERVISOR'
+  | 'CUSTOM';
 
 export interface Employee {
   id: string;
@@ -16,9 +17,13 @@ export interface Employee {
   lastName: string;
   email: string;
   phone?: string | null;
+  gender?: string | null;
   address?: string | null;
   fatherName?: string | null;
   category: EmployeeCategory;
+  customCategory?: string | null;
+  pfApplicable?: boolean;
+  esiApplicable?: boolean;
   department?: string | null;
   designation?: string | null;
   employmentType: EmploymentType;
@@ -49,9 +54,13 @@ export interface CreateEmployeeInput {
   lastName: string;
   email: string;
   phone?: string;
+  gender?: string;
   address?: string;
   fatherName?: string;
   category?: EmployeeCategory;
+  customCategory?: string;
+  pfApplicable?: boolean;
+  esiApplicable?: boolean;
   department?: string;
   designation?: string;
   employmentType?: EmploymentType;

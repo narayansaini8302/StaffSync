@@ -13,7 +13,8 @@ export type EmployeeCategoryInput =
   | 'HOUSEKEEPING'
   | 'SEMI_SKILLED'
   | 'SECURITY_GUARD'
-  | 'SUPERVISOR';
+  | 'SUPERVISOR'
+  | 'CUSTOM';
 
 export interface CreateEmployeeInput {
   employeeCode: string;
@@ -21,9 +22,13 @@ export interface CreateEmployeeInput {
   lastName: string;
   email: string;
   phone?: string;
+  gender?: string;
   address: string;
   fatherName: string;
   category?: EmployeeCategoryInput;
+  customCategory?: string;
+  pfApplicable?: boolean;
+  esiApplicable?: boolean;
   department?: string;
   designation?: string;
   employmentType?: 'FULL_TIME' | 'PART_TIME' | 'CONTRACT' | 'INTERN';
@@ -62,9 +67,13 @@ export async function createEmployee(companyId: string, input: CreateEmployeeInp
       lastName: input.lastName,
       email: input.email,
       phone: input.phone,
+      gender: input.gender ?? null,
       address: input.address,
       fatherName: input.fatherName,
       category: input.category ?? 'HOUSEKEEPING',
+      customCategory: input.category === 'CUSTOM' ? (input.customCategory ?? null) : null,
+      pfApplicable: input.pfApplicable ?? true,
+      esiApplicable: input.esiApplicable ?? true,
       department: input.department,
       designation: input.designation,
       employmentType: input.employmentType ?? 'FULL_TIME',
@@ -198,9 +207,13 @@ export async function updateEmployee(
   if (input.lastName !== undefined) data.lastName = input.lastName;
   if (input.email !== undefined) data.email = input.email;
   if (input.phone !== undefined) data.phone = input.phone;
+  if (input.gender !== undefined) data.gender = input.gender;
   if (input.address !== undefined) data.address = input.address;
   if (input.fatherName !== undefined) data.fatherName = input.fatherName;
   if (input.category !== undefined) data.category = input.category;
+  if (input.customCategory !== undefined) data.customCategory = input.customCategory;
+  if (input.pfApplicable !== undefined) data.pfApplicable = input.pfApplicable;
+  if (input.esiApplicable !== undefined) data.esiApplicable = input.esiApplicable;
   if (input.department !== undefined) data.department = input.department;
   if (input.designation !== undefined) data.designation = input.designation;
   if (input.employmentType !== undefined) data.employmentType = input.employmentType;
@@ -300,7 +313,10 @@ export async function generateJoiningLetterPdf(companyId: string, employeeId: st
     employeeName: `${employee.firstName} ${employee.lastName}`,
     employeeCode: employee.employeeCode,
     fatherName: employee.fatherName ?? '—',
-    category: categoryDefaults[category]?.label ?? category,
+    category:
+      employee.category === 'CUSTOM'
+        ? employee.customCategory || 'Custom'
+        : categoryDefaults[category]?.label ?? category,
     department: employee.department ?? '—',
     designation: employee.designation ?? 'Employee',
     employmentType: employmentTypeLabel(employee.employmentType),

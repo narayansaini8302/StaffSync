@@ -25,13 +25,15 @@ type EmployeeCategory =
   | 'HOUSEKEEPING'
   | 'SEMI_SKILLED'
   | 'SECURITY_GUARD'
-  | 'SUPERVISOR';
+  | 'SUPERVISOR'
+  | 'CUSTOM';
 
 const categoryLabels: Record<EmployeeCategory, string> = {
   HOUSEKEEPING: 'Housekeeping',
   SEMI_SKILLED: 'Semi Skilled',
   SECURITY_GUARD: 'Security Guard',
   SUPERVISOR: 'Supervisor',
+  CUSTOM: 'Custom (Driver, Tailor, etc.)',
 };
 
 const categoryDefaults: Record<EmployeeCategory, number> = {
@@ -39,6 +41,7 @@ const categoryDefaults: Record<EmployeeCategory, number> = {
   SEMI_SKILLED: 17662,
   SECURITY_GUARD: 19676,
   SUPERVISOR: 26219,
+  CUSTOM: 15000,
 };
 
 export default function EmployeesPage() {
@@ -223,9 +226,24 @@ export default function EmployeesPage() {
                   )}
                 </td>
                 <td className="px-4 py-3 text-fg-2 text-xs">
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-elevated border border-subtle">
-                    {categoryLabels[(emp.category as EmployeeCategory) ?? 'HOUSEKEEPING']}
-                  </span>
+                  <div className="flex flex-col gap-1 items-start">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-elevated border border-subtle">
+                      {emp.category === 'CUSTOM'
+                        ? emp.customCategory || 'Custom'
+                        : categoryLabels[(emp.category as EmployeeCategory) ?? 'HOUSEKEEPING'] || emp.category}
+                    </span>
+                    <div className="flex items-center gap-1.5 text-[10px]">
+                      {emp.gender && (
+                        <span className="text-muted">{emp.gender}</span>
+                      )}
+                      {emp.pfApplicable !== false && (
+                        <span className="text-[9px] px-1 py-0.2 rounded bg-brand/10 text-brand font-medium">PF</span>
+                      )}
+                      {emp.esiApplicable !== false && (
+                        <span className="text-[9px] px-1 py-0.2 rounded bg-indigo-500/10 text-indigo-500 font-medium">ESI</span>
+                      )}
+                    </div>
+                  </div>
                 </td>
                 <td className="px-4 py-3 text-fg-2">{emp.email}</td>
                 <td className="px-4 py-3 text-fg-2 text-xs">{emp.phone ?? '—'}</td>
@@ -387,9 +405,13 @@ function EmployeeFormModal({
     lastName: '',
     email: '',
     phone: '',
+    gender: 'Male',
     address: '',
     fatherName: '',
     category: 'HOUSEKEEPING',
+    customCategory: '',
+    pfApplicable: true,
+    esiApplicable: true,
     department: '',
     designation: '',
     employmentType: 'FULL_TIME',
@@ -414,9 +436,13 @@ function EmployeeFormModal({
           lastName: emp.lastName,
           email: emp.email,
           phone: emp.phone ?? '',
+          gender: emp.gender ?? 'Male',
           address: emp.address ?? '',
           fatherName: emp.fatherName ?? '',
           category: emp.category ?? 'HOUSEKEEPING',
+          customCategory: emp.customCategory ?? '',
+          pfApplicable: emp.pfApplicable ?? true,
+          esiApplicable: emp.esiApplicable ?? true,
           department: emp.department ?? '',
           designation: emp.designation ?? '',
           employmentType: emp.employmentType,
@@ -432,9 +458,13 @@ function EmployeeFormModal({
           lastName: '',
           email: '',
           phone: '',
+          gender: 'Male',
           address: '',
           fatherName: '',
           category: 'HOUSEKEEPING',
+          customCategory: '',
+          pfApplicable: true,
+          esiApplicable: true,
           department: '',
           designation: '',
           employmentType: 'FULL_TIME',
@@ -451,7 +481,7 @@ function EmployeeFormModal({
     setForm({
       ...form,
       category: cat,
-      baseSalary: categoryDefaults[cat],
+      baseSalary: cat === 'CUSTOM' ? form.baseSalary : categoryDefaults[cat],
     });
   };
 
@@ -460,15 +490,30 @@ function EmployeeFormModal({
     setError(null);
     setSaving(true);
     try {
+      const payload = {
+        ...form,
+        employeeCode: form.employeeCode.trim(),
+        firstName: form.firstName.trim(),
+        lastName: form.lastName.trim(),
+        email: form.email.trim(),
+        phone: form.phone?.trim() || undefined,
+        gender: form.gender || undefined,
+        address: form.address?.trim() || '',
+        fatherName: form.fatherName?.trim() || '',
+        customCategory: form.category === 'CUSTOM' ? form.customCategory?.trim() : undefined,
+        department: form.department?.trim() || undefined,
+        designation: form.designation?.trim() || undefined,
+        clientId: form.clientId || null,
+      };
       if (isEdit && employee) {
-        await api.patch(`/api/employees/${employee.id}`, form);
+        await api.patch(`/api/employees/${employee.id}`, payload);
       } else {
-        await api.post('/api/employees', form);
+        await api.post('/api/employees', payload);
       }
       onSaved();
       toast.success(isEdit ? 'Employee updated' : 'Employee created');
     } catch (e: any) {
-      setError(e?.message ?? 'Save failed');
+      setError(typeof e?.message === 'string' ? e.message : 'Save failed');
     } finally {
       setSaving(false);
     }
@@ -482,15 +527,33 @@ function EmployeeFormModal({
       maxWidth="max-w-2xl"
     >
       <form onSubmit={submit} className="space-y-4">
-        {/* Row 1: Employee Code + Category */}
+        {/* Row 1: Employee Code + Gender */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field
             label="Employee code"
             value={form.employeeCode}
             onChange={(v) => setForm({ ...form, employeeCode: v })}
             required
-            placeholder="HK-001"
+            placeholder="EMP-001"
           />
+          <div>
+            <label className="block text-xs text-fg-2 mb-1">
+              Gender <span className="text-danger">*</span>
+            </label>
+            <select
+              value={form.gender ?? 'Male'}
+              onChange={(e) => setForm({ ...form, gender: e.target.value })}
+              className="w-full px-3 py-2 rounded-lg bg-app border border-subtle text-fg text-sm focus:outline-none focus:border-brand"
+            >
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Row 2: Category & Custom Category if selected */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className="block text-xs text-fg-2 mb-1">Category</label>
             <select
@@ -505,9 +568,24 @@ function EmployeeFormModal({
               ))}
             </select>
           </div>
+
+          {form.category === 'CUSTOM' ? (
+            <Field
+              label="Custom Category Name"
+              value={form.customCategory ?? ''}
+              onChange={(v) => setForm({ ...form, customCategory: v })}
+              required
+              placeholder="e.g. Driver, Tailor, Electrician"
+              hint="Custom job role or designation"
+            />
+          ) : (
+            <div className="text-xs text-muted flex items-center pt-5">
+              Standard category rates will apply
+            </div>
+          )}
         </div>
 
-        {/* Row 2: First + Last name */}
+        {/* Row 3: First + Last name */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field
             label="First name"
@@ -523,7 +601,7 @@ function EmployeeFormModal({
           />
         </div>
 
-        {/* Row 3: Father's name (required) */}
+        {/* Row 4: Father's name (required) */}
         <Field
           label="Father's name"
           value={form.fatherName ?? ''}
@@ -531,7 +609,7 @@ function EmployeeFormModal({
           required
         />
 
-        {/* Row 4: Email + Phone */}
+        {/* Row 5: Email + Phone */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field
             label="Email"
@@ -547,7 +625,7 @@ function EmployeeFormModal({
           />
         </div>
 
-        {/* Row 5: Address (required, textarea) */}
+        {/* Row 6: Address (required, textarea) */}
         <div>
           <label className="block text-xs text-fg-2 mb-1">
             Address <span className="text-danger">*</span>
@@ -562,7 +640,7 @@ function EmployeeFormModal({
           />
         </div>
 
-        {/* Row 6: Department + Designation */}
+        {/* Row 7: Department + Designation */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field
             label="Department"
@@ -576,7 +654,7 @@ function EmployeeFormModal({
           />
         </div>
 
-        {/* Row 7: Employment type + Joining date */}
+        {/* Row 8: Employment type + Joining date */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className="block text-xs text-fg-2 mb-1">Employment type</label>
@@ -602,7 +680,7 @@ function EmployeeFormModal({
           />
         </div>
 
-        {/* Row 8: Base salary + currency */}
+        {/* Row 9: Base salary + currency */}
         <div className="grid grid-cols-2 gap-3">
           <div>
             <Field
@@ -614,8 +692,9 @@ function EmployeeFormModal({
               }
             />
             <div className="text-[10px] text-muted mt-1">
-              Auto-filled for {categoryLabels[form.category as EmployeeCategory]}:
-              ₹{categoryDefaults[form.category as EmployeeCategory].toLocaleString('en-IN')}
+              {form.category === 'CUSTOM'
+                ? `Enter monthly base salary for ${form.customCategory || 'custom role'}`
+                : `Auto-filled for ${categoryLabels[form.category as EmployeeCategory]}: ₹${categoryDefaults[form.category as EmployeeCategory]?.toLocaleString('en-IN')}`}
             </div>
           </div>
           <Field
@@ -625,7 +704,39 @@ function EmployeeFormModal({
           />
         </div>
 
-        {/* Row 9: Client Assignment */}
+        {/* Row 10: Statutory Deductions (PF & ESI Checklist) */}
+        <div className="bg-surface/50 border border-subtle rounded-xl p-3.5 space-y-2.5">
+          <div className="text-xs font-semibold text-fg">Statutory Deductions (Payslip Settings)</div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <label className="flex items-start gap-2.5 cursor-pointer select-none p-2 rounded-lg hover:bg-hover transition-colors">
+              <input
+                type="checkbox"
+                checked={form.pfApplicable ?? true}
+                onChange={(e) => setForm({ ...form, pfApplicable: e.target.checked })}
+                className="mt-0.5 rounded border-subtle text-brand focus:ring-brand"
+              />
+              <div>
+                <div className="text-xs font-medium text-fg">Apply Provident Fund (PF)</div>
+                <div className="text-[11px] text-muted">13% deduction on basic pay</div>
+              </div>
+            </label>
+
+            <label className="flex items-start gap-2.5 cursor-pointer select-none p-2 rounded-lg hover:bg-hover transition-colors">
+              <input
+                type="checkbox"
+                checked={form.esiApplicable ?? true}
+                onChange={(e) => setForm({ ...form, esiApplicable: e.target.checked })}
+                className="mt-0.5 rounded border-subtle text-brand focus:ring-brand"
+              />
+              <div>
+                <div className="text-xs font-medium text-fg">Apply ESI</div>
+                <div className="text-[11px] text-muted">3.75% deduction on gross pay</div>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        {/* Row 11: Client Assignment */}
         <div>
           <label className="block text-xs text-fg-2 mb-1">
             Assigned Client <span className="text-muted">(Required to mark attendance)</span>
@@ -673,6 +784,7 @@ function Field({
   type = 'text',
   required,
   placeholder,
+  hint,
 }: {
   label: string;
   value: string;
@@ -680,6 +792,7 @@ function Field({
   type?: string;
   required?: boolean;
   placeholder?: string;
+  hint?: string;
 }) {
   return (
     <div>
@@ -695,6 +808,7 @@ function Field({
         onChange={(e) => onChange(e.target.value)}
         className="w-full px-3 py-2 rounded-lg bg-app border border-subtle text-fg text-sm focus:outline-none focus:border-brand"
       />
+      {hint && <div className="text-[10px] text-muted mt-1">{hint}</div>}
     </div>
   );
 }

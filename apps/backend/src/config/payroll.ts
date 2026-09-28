@@ -1,4 +1,4 @@
-﻿export const payrollConfig = {
+export const payrollConfig = {
   daysInMonth: 30,
   halfDayFactor: 0.5,
   standardHoursPerDay: 8,
@@ -9,7 +9,8 @@
     specialAllowance: 0.3,
   },
 
-  pfRate: 0.12,
+  pfRate: 0.13, // 13% on basic pay
+  esiRate: 0.0375, // 3.75% on gross pay
 
   professionalTax: {
     threshold: 15000,

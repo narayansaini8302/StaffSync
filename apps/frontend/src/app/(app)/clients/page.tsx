@@ -26,6 +26,7 @@ const categoryLabels: Record<EmployeeCategory, string> = {
   SEMI_SKILLED: 'Semi Skilled',
   SECURITY_GUARD: 'Security Guard',
   SUPERVISOR: 'Supervisor',
+  CUSTOM: 'Custom',
 };
 
 export default function ClientsPage() {

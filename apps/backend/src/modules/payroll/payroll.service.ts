@@ -32,6 +32,7 @@ export interface ComputedPayslip {
   employeeName: string;
   email: string;
   category: EmployeeCategoryKey;
+  customCategory?: string | null;
   hourlyRate: number;
   totalHours: number;
 
@@ -92,7 +93,10 @@ export async function computePayslipForEmployee(
   const totalHours = totalMinutes / 60;
   const category = (employee.category as EmployeeCategoryKey) || 'HOUSEKEEPING';
   const catDef = categoryDefaults[category] || categoryDefaults.HOUSEKEEPING;
-  const hourlyRate = catDef.perHour;
+  const hourlyRate =
+    employee.baseSalary && Number(employee.baseSalary) > 0
+      ? round2(Number(employee.baseSalary) / (payrollConfig.daysInMonth * payrollConfig.standardHoursPerDay))
+      : catDef.perHour;
 
   const basePay = round2(totalHours * hourlyRate);
 
@@ -101,7 +105,12 @@ export async function computePayslipForEmployee(
   const specialAllowance = round2(basePay - basic - hra);
   const grossPay = round2(basic + hra + specialAllowance);
 
-  const pf = round2(basic * payrollConfig.pfRate);
+  // PF: 13% on basic pay (if pfApplicable !== false)
+  const pf = employee.pfApplicable !== false ? round2(basic * payrollConfig.pfRate) : 0;
+
+  // ESI: 3.75% on gross pay (if esiApplicable !== false)
+  const esi = employee.esiApplicable !== false ? round2(grossPay * payrollConfig.esiRate) : 0;
+
   const professionalTax =
     grossPay > payrollConfig.professionalTax.threshold
       ? payrollConfig.professionalTax.amount
@@ -122,6 +131,7 @@ export async function computePayslipForEmployee(
 
   const deductions = [
     { label: 'Provident Fund (PF)', amount: pf },
+    { label: 'Employee State Insurance (ESI)', amount: esi },
     { label: 'Professional Tax', amount: professionalTax },
     { label: 'Income Tax', amount: incomeTax },
   ].filter((d) => d.amount > 0);
@@ -141,6 +151,7 @@ export async function computePayslipForEmployee(
     employeeName: employee.firstName + ' ' + employee.lastName,
     email: employee.email,
     category,
+    customCategory: employee.customCategory ?? null,
     hourlyRate,
     totalHours: round2(totalHours),
     presentDays,
@@ -184,7 +195,10 @@ async function renderPayslipPdf(input: {
     employeeName: input.slip.employeeName,
     employeeCode: input.slip.employeeCode,
     email: input.slip.email,
-    category: categoryDefaults[input.slip.category].label,
+    category:
+      input.slip.category === 'CUSTOM'
+        ? input.slip.customCategory || 'Custom'
+        : categoryDefaults[input.slip.category]?.label || input.slip.category,
     hourlyRate: fmt(input.slip.hourlyRate),
     totalHours: input.slip.totalHours.toFixed(2),
     presentDays: input.slip.presentDays,
@@ -425,7 +439,10 @@ export async function regeneratePayslipPdf(
   });
   const category = (employee?.category as EmployeeCategoryKey) || 'HOUSEKEEPING';
   const catDef = categoryDefaults[category] || categoryDefaults.HOUSEKEEPING;
-  const hourlyRate = catDef.perHour;
+  const hourlyRate =
+    employee?.baseSalary && Number(employee.baseSalary) > 0
+      ? round2(Number(employee.baseSalary) / (payrollConfig.daysInMonth * payrollConfig.standardHoursPerDay))
+      : catDef.perHour;
 
   // Recompute hours from attendance_days in the period
   const days = await prisma.attendanceDay.findMany({
@@ -455,6 +472,7 @@ export async function regeneratePayslipPdf(
     employeeName: slip.employeeName,
     email: slip.email,
     category,
+    customCategory: employee?.customCategory ?? null,
     hourlyRate,
     totalHours,
     presentDays,

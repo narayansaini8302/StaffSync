@@ -28,31 +28,39 @@ const categoryEnum = z.enum([
   'SEMI_SKILLED',
   'SECURITY_GUARD',
   'SUPERVISOR',
+  'CUSTOM',
 ]);
 
+const emptyToUndefined = (val: unknown) =>
+  typeof val === 'string' && val.trim() === '' ? undefined : val;
+
 const createSchema = z.object({
-  employeeCode: z.string().min(1),
-  firstName: z.string().min(1),
-  lastName: z.string().min(1),
-  email: z.string().email(),
-  phone: z.string().optional(),
-  address: z.string().min(1),
-  fatherName: z.string().min(1),
+  employeeCode: z.string().trim().min(1, 'Employee code is required'),
+  firstName: z.string().trim().min(1, 'First name is required'),
+  lastName: z.string().trim().min(1, 'Last name is required'),
+  email: z.string().trim().email('Invalid email address'),
+  phone: z.preprocess(emptyToUndefined, z.string().trim().optional().nullable()),
+  gender: z.preprocess(emptyToUndefined, z.string().trim().optional().nullable()),
+  address: z.string().trim().min(1, 'Address is required'),
+  fatherName: z.string().trim().min(1, "Father's name is required"),
   category: categoryEnum.optional(),
-  department: z.string().optional(),
-  designation: z.string().optional(),
+  customCategory: z.preprocess(emptyToUndefined, z.string().trim().optional().nullable()),
+  pfApplicable: z.boolean().optional(),
+  esiApplicable: z.boolean().optional(),
+  department: z.preprocess(emptyToUndefined, z.string().trim().optional().nullable()),
+  designation: z.preprocess(emptyToUndefined, z.string().trim().optional().nullable()),
   employmentType: z.enum(['FULL_TIME', 'PART_TIME', 'CONTRACT', 'INTERN']).optional(),
   dateOfJoining: z.string(),
   baseSalary: z.number().nonnegative().optional(),
   currency: z.string().length(3).optional(),
-  userId: z.string().uuid().optional(),
-  clientId: z.string().uuid().nullable().optional(),
+  userId: z.preprocess(emptyToUndefined, z.string().uuid().optional().nullable()),
+  clientId: z.preprocess(emptyToUndefined, z.string().uuid().nullable().optional()),
 });
 
 const updateSchema = createSchema.partial().extend({
   isActive: z.boolean().optional(),
-  dateOfLeaving: z.string().nullable().optional(),
-  clientId: z.string().uuid().nullable().optional(),
+  dateOfLeaving: z.preprocess(emptyToUndefined, z.string().nullable().optional()),
+  clientId: z.preprocess(emptyToUndefined, z.string().uuid().nullable().optional()),
 });
 
 const listSchema = z.object({
