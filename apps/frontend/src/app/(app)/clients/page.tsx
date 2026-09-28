@@ -262,15 +262,23 @@ function ClientFormModal({
     setError(null);
     setSaving(true);
     try {
+      const payload = {
+        name: form.name.trim(),
+        address: form.address.trim(),
+        gstin: form.gstin?.trim() || undefined,
+        email: form.email?.trim() || undefined,
+        phone: form.phone?.trim() || undefined,
+        stateCode: form.stateCode?.trim() || undefined,
+      };
       if (isEdit && client) {
-        await api.patch(`/api/clients/${client.id}`, form);
+        await api.patch(`/api/clients/${client.id}`, payload);
       } else {
-        await api.post('/api/clients', form);
+        await api.post('/api/clients', payload);
       }
       toast.success(isEdit ? 'Client updated' : 'Client created');
       onSaved();
     } catch (e: any) {
-      setError(e?.message ?? 'Save failed');
+      setError(typeof e?.message === 'string' ? e.message : 'Save failed');
     } finally {
       setSaving(false);
     }
@@ -339,7 +347,7 @@ function ClientFormModal({
 
         {error && (
           <div className="text-sm text-danger bg-danger-soft border border-danger/30 rounded-lg px-3 py-2">
-            {error}
+            {typeof error === 'string' ? error : JSON.stringify(error)}
           </div>
         )}
 

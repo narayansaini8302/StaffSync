@@ -8,6 +8,49 @@ export interface ApiError {
   detail?: unknown;
 }
 
+function formatApiErrorMessage(body: any): string {
+  if (!body) return 'Request failed';
+  if (typeof body === 'string') return body;
+
+  const raw = body.error ?? body.detail ?? body.message;
+  if (typeof raw === 'string') return raw;
+
+  const target = typeof raw === 'object' && raw !== null ? raw : body;
+  if (typeof target === 'object' && target !== null) {
+    const parts: string[] = [];
+
+    if (Array.isArray(target.formErrors)) {
+      parts.push(...target.formErrors.filter((msg: unknown) => typeof msg === 'string'));
+    }
+
+    if (target.fieldErrors && typeof target.fieldErrors === 'object') {
+      for (const [field, errs] of Object.entries(target.fieldErrors)) {
+        if (Array.isArray(errs)) {
+          const joined = errs.filter(Boolean).join(', ');
+          if (joined) parts.push(`${field}: ${joined}`);
+        } else if (typeof errs === 'string') {
+          parts.push(`${field}: ${errs}`);
+        }
+      }
+    }
+
+    if (Array.isArray(target.errors)) {
+      for (const err of target.errors) {
+        if (typeof err === 'string') parts.push(err);
+        else if (err && typeof err === 'object' && typeof err.message === 'string') {
+          parts.push(err.message);
+        }
+      }
+    }
+
+    if (parts.length > 0) {
+      return parts.join(' • ');
+    }
+  }
+
+  return 'Request failed';
+}
+
 class ApiClient {
   private onError: ((message: string) => void) | null = null;
 
@@ -93,9 +136,10 @@ class ApiClient {
       } catch {
         body = { error: res.statusText };
       }
-           const message = body.error ?? body.detail ?? 'Request failed';
+
+      const message = formatApiErrorMessage(body);
       if (this.onError && res.status !== 401) {
-        this.onError(typeof message === 'string' ? message : 'Request failed');
+        this.onError(message);
       }
       throw {
         status: res.status,

@@ -21,12 +21,12 @@ export interface ClientRateInput {
 export async function createClient(companyId: string, input: CreateClientInput) {
   return prisma.client.create({
     data: {
-      name: input.name,
-      gstin: input.gstin,
-      address: input.address,
-      email: input.email,
-      phone: input.phone,
-      stateCode: input.stateCode,
+      name: input.name.trim(),
+      gstin: input.gstin?.trim() || null,
+      address: input.address.trim(),
+      email: input.email?.trim() || null,
+      phone: input.phone?.trim() || null,
+      stateCode: input.stateCode?.trim() || null,
       companyId,
     },
   });
@@ -63,12 +63,12 @@ export async function updateClient(
   if (!existing) throw new Error('CLIENT_NOT_FOUND');
 
   const data: any = {};
-  if (input.name !== undefined) data.name = input.name;
-  if (input.gstin !== undefined) data.gstin = input.gstin;
-  if (input.address !== undefined) data.address = input.address;
-  if (input.email !== undefined) data.email = input.email;
-  if (input.phone !== undefined) data.phone = input.phone;
-  if (input.stateCode !== undefined) data.stateCode = input.stateCode;
+  if (input.name !== undefined) data.name = input.name.trim();
+  if (input.gstin !== undefined) data.gstin = input.gstin?.trim() || null;
+  if (input.address !== undefined) data.address = input.address.trim();
+  if (input.email !== undefined) data.email = input.email?.trim() || null;
+  if (input.phone !== undefined) data.phone = input.phone?.trim() || null;
+  if (input.stateCode !== undefined) data.stateCode = input.stateCode?.trim() || null;
 
   return prisma.client.update({ where: { id }, data });
 }

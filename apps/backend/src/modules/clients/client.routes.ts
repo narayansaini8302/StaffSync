@@ -14,13 +14,16 @@ import {
 export const clientRouter = Router();
 clientRouter.use(requireAuth);
 
+const emptyToUndefined = (val: unknown) =>
+  typeof val === 'string' && val.trim() === '' ? undefined : val;
+
 const createSchema = z.object({
-  name: z.string().min(2),
-  gstin: z.string().optional(),
-  address: z.string().min(1),
-  email: z.string().email().optional(),
-  phone: z.string().optional(),
-  stateCode: z.string().length(2).optional(),
+  name: z.string().trim().min(2, 'Client name must be at least 2 characters'),
+  gstin: z.preprocess(emptyToUndefined, z.string().trim().optional().nullable()),
+  address: z.string().trim().min(1, 'Address is required'),
+  email: z.preprocess(emptyToUndefined, z.string().trim().email('Invalid email address').optional().nullable()),
+  phone: z.preprocess(emptyToUndefined, z.string().trim().optional().nullable()),
+  stateCode: z.preprocess(emptyToUndefined, z.string().trim().length(2, 'State code must be exactly 2 characters').optional().nullable()),
 });
 
 const updateSchema = createSchema.partial();
