@@ -96,6 +96,20 @@ const categoryLabels: Record<EmployeeCategory, string> = {
   CUSTOM: 'Custom',
 };
 
+export function isGeneralInvoice(inv: TaxInvoice | null | undefined): boolean {
+  if (!inv) return false;
+  if (inv.notes && inv.notes.includes('[GENERAL_INVOICE]')) return true;
+  if (inv.invoiceNumber && inv.invoiceNumber.startsWith('GEN-')) return true;
+  if (
+    inv.lineItems &&
+    inv.lineItems.length > 0 &&
+    inv.lineItems.every((li: any) => li.employeeId === null)
+  ) {
+    return true;
+  }
+  return false;
+}
+
 export default function InvoicesPage() {
   const qc = useQueryClient();
   const [generating, setGenerating] = useState(false);
@@ -103,6 +117,7 @@ export default function InvoicesPage() {
   const [emailingInvoice, setEmailingInvoice] = useState<TaxInvoice | null>(null);
   const [payingInvoice, setPayingInvoice] = useState<TaxInvoice | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [categoryFilter, setCategoryFilter] = useState<'ALL' | 'TAX' | 'GENERAL'>('ALL');
 
   const query = useQuery({
     queryKey: ['invoices'],
@@ -110,21 +125,29 @@ export default function InvoicesPage() {
   });
 
   const invoices = query.data?.data ?? [];
+  const generalInvoicesCount = invoices.filter(isGeneralInvoice).length;
+  const taxInvoicesCount = invoices.length - generalInvoicesCount;
 
-  // KPI Calculations: Total Invoiced, Payment Taken, On Pending
-  const totalInvoiced = invoices.reduce(
+  const displayInvoices = invoices.filter((inv) => {
+    if (categoryFilter === 'TAX') return !isGeneralInvoice(inv);
+    if (categoryFilter === 'GENERAL') return isGeneralInvoice(inv);
+    return true;
+  });
+
+  // KPI Calculations based on active category selection
+  const totalInvoiced = displayInvoices.reduce(
     (sum, inv) => (inv.status !== 'CANCELLED' ? sum + Number(inv.totalAmount) : sum),
     0,
   );
-  const totalPaymentTaken = invoices.reduce(
+  const totalPaymentTaken = displayInvoices.reduce(
     (sum, inv) => (inv.status !== 'CANCELLED' ? sum + Number(inv.paidAmount || 0) : sum),
     0,
   );
   const totalPending = Math.max(0, totalInvoiced - totalPaymentTaken);
 
-  const paidCount = invoices.filter((i) => i.status === 'PAID').length;
-  const partialCount = invoices.filter((i) => i.status === 'PARTIAL').length;
-  const pendingCount = invoices.filter(
+  const paidCount = displayInvoices.filter((i) => i.status === 'PAID').length;
+  const partialCount = displayInvoices.filter((i) => i.status === 'PARTIAL').length;
+  const pendingCount = displayInvoices.filter(
     (i) => i.status === 'SENT' || i.status === 'DRAFT',
   ).length;
 
@@ -190,15 +213,31 @@ export default function InvoicesPage() {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl sm:text-2xl font-semibold text-fg">Tax Invoices & Payments</h1>
+          <h1 className="text-xl sm:text-2xl font-semibold text-fg">Invoices & Payments</h1>
           <p className="text-xs sm:text-sm text-fg-2 mt-1">
-            Bill clients, record payments taken, and track pending receivables
+            Bill clients, record payments taken, and track receivables across Tax & General invoices
           </p>
         </div>
-        <Button onClick={() => setGenerating(true)} className="w-full sm:w-auto justify-center">
-          <Plus size={16} />
-          Generate Invoice
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="secondary"
+            onClick={() => {
+              const el = document.getElementById('manual-invoice-generator');
+              el?.scrollIntoView({ behavior: 'smooth' });
+            }}
+            className="w-full sm:w-auto justify-center text-xs gap-1.5"
+          >
+            <Sparkles size={14} />
+            New General Invoice
+          </Button>
+          <Button
+            onClick={() => setGenerating(true)}
+            className="w-full sm:w-auto justify-center text-xs gap-1.5"
+          >
+            <Plus size={15} />
+            Generate Tax Invoice
+          </Button>
+        </div>
       </div>
 
       {/* KPI Cards: Total Invoiced, Payment Taken, On Pending */}
@@ -290,6 +329,57 @@ export default function InvoicesPage() {
         </div>
       </div>
 
+      {/* Category Tabs Toolbar to Separate Tax vs General Invoices */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-surface border border-subtle rounded-xl p-3 shadow-sm">
+        <div className="flex items-center gap-1.5 p-1 bg-elevated/60 rounded-lg border border-subtle self-start sm:self-auto overflow-x-auto max-w-full">
+          <button
+            type="button"
+            onClick={() => setCategoryFilter('ALL')}
+            className={`px-3 py-1.5 rounded-md text-xs font-medium transition whitespace-nowrap ${
+              categoryFilter === 'ALL'
+                ? 'bg-surface text-brand shadow-sm font-semibold border border-subtle'
+                : 'text-fg-2 hover:text-fg'
+            }`}
+          >
+            All Invoices ({invoices.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setCategoryFilter('TAX')}
+            className={`px-3 py-1.5 rounded-md text-xs font-medium transition flex items-center gap-1.5 whitespace-nowrap ${
+              categoryFilter === 'TAX'
+                ? 'bg-surface text-brand shadow-sm font-semibold border border-subtle'
+                : 'text-fg-2 hover:text-fg'
+            }`}
+          >
+            <Receipt size={13} />
+            <span>Tax Invoices</span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-brand/10 text-brand font-semibold">
+              {taxInvoicesCount}
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setCategoryFilter('GENERAL')}
+            className={`px-3 py-1.5 rounded-md text-xs font-medium transition flex items-center gap-1.5 whitespace-nowrap ${
+              categoryFilter === 'GENERAL'
+                ? 'bg-surface text-brand shadow-sm font-semibold border border-subtle'
+                : 'text-fg-2 hover:text-fg'
+            }`}
+          >
+            <FileText size={13} />
+            <span>General Invoices</span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-500 font-semibold">
+              {generalInvoicesCount}
+            </span>
+          </button>
+        </div>
+
+        <div className="text-xs text-muted">
+          Showing <span className="font-semibold text-fg">{displayInvoices.length}</span> of {invoices.length} invoices
+        </div>
+      </div>
+
       {/* Invoices List / Table */}
       <div className="bg-surface border border-subtle rounded-xl overflow-hidden shadow-sm">
         {/* Mobile Invoice Cards (< md screens: no horizontal scrolling) */}
@@ -302,10 +392,16 @@ export default function InvoicesPage() {
           )}
           {!query.isLoading && invoices.length === 0 && (
             <div className="p-8 text-center text-muted">
-              No invoices yet. Click "Generate Invoice" above to create one.
+              No invoices yet. Click "Generate Tax Invoice" or "New General Invoice" above to create one.
             </div>
           )}
-          {invoices.map((inv) => {
+          {!query.isLoading && invoices.length > 0 && displayInvoices.length === 0 && (
+            <div className="p-8 text-center text-muted">
+              No {categoryFilter === 'TAX' ? 'Tax' : 'General'} invoices found.
+            </div>
+          )}
+          {displayInvoices.map((inv) => {
+            const isGen = isGeneralInvoice(inv);
             const cfg = statusConfig[inv.status] || statusConfig.DRAFT;
             const Icon = cfg.icon;
             const total = Number(inv.totalAmount);
@@ -317,8 +413,19 @@ export default function InvoicesPage() {
                 {/* Header: Invoice # and Status */}
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <div className="text-fg font-mono font-bold text-sm">
-                      {inv.invoiceNumber}
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-fg font-mono font-bold text-sm">
+                        {inv.invoiceNumber}
+                      </span>
+                      {isGen ? (
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                          General
+                        </span>
+                      ) : (
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-brand/10 text-brand border border-brand/20">
+                          Tax Invoice
+                        </span>
+                      )}
                     </div>
                     <div className="text-[11px] text-muted mt-0.5">
                       Issued: {inv.issuedAt.slice(0, 10)} • {monthLabel(inv.periodStart)}
@@ -396,7 +503,7 @@ export default function InvoicesPage() {
                       onClick={() => downloadPdf(inv.id, 'pdf', 'invoice')}
                       disabled={downloadingId === inv.id + 'pdf'}
                       className="p-2 rounded-lg bg-elevated hover:bg-hover text-fg-2 hover:text-brand disabled:opacity-50 transition"
-                      title="Download Tax Invoice PDF"
+                      title={isGen ? 'Download General Invoice PDF' : 'Download Tax Invoice PDF'}
                     >
                       {downloadingId === inv.id + 'pdf' ? (
                         <Loader2 size={15} className="animate-spin" />
@@ -404,20 +511,22 @@ export default function InvoicesPage() {
                         <Download size={15} />
                       )}
                     </button>
-                    <button
-                      onClick={() =>
-                        downloadPdf(inv.id, 'annexure/pdf', 'annexure')
-                      }
-                      disabled={downloadingId === inv.id + 'annexure/pdf'}
-                      className="p-2 rounded-lg bg-elevated hover:bg-hover text-fg-2 hover:text-brand disabled:opacity-50 transition"
-                      title="Download Employee Annexure PDF"
-                    >
-                      {downloadingId === inv.id + 'annexure/pdf' ? (
-                        <Loader2 size={15} className="animate-spin" />
-                      ) : (
-                        <FileSpreadsheet size={15} />
-                      )}
-                    </button>
+                    {!isGen && (
+                      <button
+                        onClick={() =>
+                          downloadPdf(inv.id, 'annexure/pdf', 'annexure')
+                        }
+                        disabled={downloadingId === inv.id + 'annexure/pdf'}
+                        className="p-2 rounded-lg bg-elevated hover:bg-hover text-fg-2 hover:text-brand disabled:opacity-50 transition"
+                        title="Download Employee Annexure PDF"
+                      >
+                        {downloadingId === inv.id + 'annexure/pdf' ? (
+                          <Loader2 size={15} className="animate-spin" />
+                        ) : (
+                          <FileSpreadsheet size={15} />
+                        )}
+                      </button>
+                    )}
                     <button
                       onClick={() => deleteInvoice(inv.id)}
                       className="p-2 rounded-lg bg-elevated hover:bg-danger-soft text-fg-2 hover:text-danger transition"
@@ -464,12 +573,21 @@ export default function InvoicesPage() {
               {!query.isLoading && invoices.length === 0 && (
                 <tr>
                   <td colSpan={8} className="px-4 py-12 text-center text-muted">
-                    No invoices yet. Click "Generate Invoice" above to create one.
+                    No invoices yet. Click "Generate Tax Invoice" or "New General Invoice" above to create one.
                   </td>
                 </tr>
               )}
 
-              {invoices.map((inv) => {
+              {!query.isLoading && invoices.length > 0 && displayInvoices.length === 0 && (
+                <tr>
+                  <td colSpan={8} className="px-4 py-12 text-center text-muted">
+                    No {categoryFilter === 'TAX' ? 'Tax' : 'General'} invoices found.
+                  </td>
+                </tr>
+              )}
+
+              {displayInvoices.map((inv) => {
+                const isGen = isGeneralInvoice(inv);
                 const cfg = statusConfig[inv.status] || statusConfig.DRAFT;
                 const Icon = cfg.icon;
                 const total = Number(inv.totalAmount);
@@ -481,12 +599,23 @@ export default function InvoicesPage() {
                     key={inv.id}
                     className="hover:bg-hover transition-colors"
                   >
-                    {/* Invoice Number & Date */}
+                    {/* Invoice Number & Date with Category Badge */}
                     <td className="px-4 py-3.5">
-                      <div className="text-fg font-mono font-medium text-xs">
-                        {inv.invoiceNumber}
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-fg font-mono font-medium text-xs">
+                          {inv.invoiceNumber}
+                        </span>
+                        {isGen ? (
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                            General
+                          </span>
+                        ) : (
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-brand/10 text-brand border border-brand/20">
+                            Tax
+                          </span>
+                        )}
                       </div>
-                      <div className="text-[11px] text-muted">
+                      <div className="text-[11px] text-muted mt-0.5">
                         Issued: {inv.issuedAt.slice(0, 10)}
                       </div>
                     </td>
@@ -574,7 +703,7 @@ export default function InvoicesPage() {
                           onClick={() => downloadPdf(inv.id, 'pdf', 'invoice')}
                           disabled={downloadingId === inv.id + 'pdf'}
                           className="p-1.5 rounded hover:bg-hover text-fg-2 hover:text-brand disabled:opacity-50 transition"
-                          title="Download Tax Invoice PDF"
+                          title={isGen ? 'Download General Invoice PDF' : 'Download Tax Invoice PDF'}
                         >
                           {downloadingId === inv.id + 'pdf' ? (
                             <Loader2 size={15} className="animate-spin" />
@@ -582,20 +711,22 @@ export default function InvoicesPage() {
                             <Download size={15} />
                           )}
                         </button>
-                        <button
-                          onClick={() =>
-                            downloadPdf(inv.id, 'annexure/pdf', 'annexure')
-                          }
-                          disabled={downloadingId === inv.id + 'annexure/pdf'}
-                          className="p-1.5 rounded hover:bg-hover text-fg-2 hover:text-brand disabled:opacity-50 transition"
-                          title="Download Employee Annexure PDF"
-                        >
-                          {downloadingId === inv.id + 'annexure/pdf' ? (
-                            <Loader2 size={15} className="animate-spin" />
-                          ) : (
-                            <FileSpreadsheet size={15} />
-                          )}
-                        </button>
+                        {!isGen && (
+                          <button
+                            onClick={() =>
+                              downloadPdf(inv.id, 'annexure/pdf', 'annexure')
+                            }
+                            disabled={downloadingId === inv.id + 'annexure/pdf'}
+                            className="p-1.5 rounded hover:bg-hover text-fg-2 hover:text-brand disabled:opacity-50 transition"
+                            title="Download Employee Annexure PDF"
+                          >
+                            {downloadingId === inv.id + 'annexure/pdf' ? (
+                              <Loader2 size={15} className="animate-spin" />
+                            ) : (
+                              <FileSpreadsheet size={15} />
+                            )}
+                          </button>
+                        )}
                         <button
                           onClick={() => deleteInvoice(inv.id)}
                           className="p-1.5 rounded hover:bg-hover text-fg-2 hover:text-danger transition"
@@ -971,18 +1102,16 @@ function InvoiceDetailsModal({
           {/* Top Info Cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <Info
+              label="Invoice Category"
+              value={isGeneralInvoice(detail) ? 'General Invoice' : 'Tax Invoice (Attendance)'}
+            />
+            <Info
               label="Billing Period"
               value={`${detail.periodStart.slice(0, 10)} → ${detail.periodEnd.slice(0, 10)}`}
             />
             <Info
-              label="Employees Billed"
+              label={isGeneralInvoice(detail) ? 'Services Billed' : 'Employees Billed'}
               value={String(detail.lineItems?.length ?? 0)}
-            />
-            <Info
-              label="Total Hours"
-              value={(detail.lineItems ?? [])
-                .reduce((s: number, li: any) => s + Number(li.hoursWorked), 0)
-                .toFixed(2)}
             />
             <Info
               label="Invoice Status"
@@ -1095,11 +1224,11 @@ function InvoiceDetailsModal({
             </div>
           </div>
 
-          {/* Manpower Line items table */}
+          {/* Line items table */}
           <div className="space-y-2">
             <h3 className="text-sm font-semibold text-fg flex items-center gap-1.5">
               <FileText size={15} className="text-brand" />
-              Billed Manpower Line Items
+              {isGeneralInvoice(detail) ? 'Billed Service Line Items' : 'Billed Manpower Line Items'}
             </h3>
             <div className="border border-subtle rounded-xl overflow-hidden bg-surface max-h-60 overflow-y-auto">
               <div className="overflow-x-auto w-full">
@@ -1107,10 +1236,18 @@ function InvoiceDetailsModal({
                   <thead className="bg-elevated/50 border-b border-subtle sticky top-0">
                     <tr className="text-fg-2 text-left">
                       <th className="px-3 py-2 font-medium">Code</th>
-                      <th className="px-3 py-2 font-medium">Employee</th>
-                      <th className="px-3 py-2 font-medium">Category</th>
-                      <th className="px-3 py-2 font-medium text-right">Hours Worked</th>
-                      <th className="px-3 py-2 font-medium text-right">Hourly Rate</th>
+                      <th className="px-3 py-2 font-medium">
+                        {isGeneralInvoice(detail) ? 'Description / Service' : 'Employee'}
+                      </th>
+                      <th className="px-3 py-2 font-medium">
+                        {isGeneralInvoice(detail) ? 'Type' : 'Category'}
+                      </th>
+                      <th className="px-3 py-2 font-medium text-right">
+                        {isGeneralInvoice(detail) ? 'Qty / Units' : 'Hours Worked'}
+                      </th>
+                      <th className="px-3 py-2 font-medium text-right">
+                        {isGeneralInvoice(detail) ? 'Unit Rate' : 'Hourly Rate'}
+                      </th>
                       <th className="px-3 py-2 font-medium text-right">Amount</th>
                     </tr>
                   </thead>
@@ -1127,7 +1264,9 @@ function InvoiceDetailsModal({
                           {categoryLabels[li.category as EmployeeCategory] || li.category}
                         </td>
                         <td className="px-3 py-2 text-right text-fg font-mono">
-                          {Number(li.hoursWorked).toFixed(2)}h
+                          {isGeneralInvoice(detail)
+                            ? Number(li.hoursWorked)
+                            : `${Number(li.hoursWorked).toFixed(2)}h`}
                         </td>
                         <td className="px-3 py-2 text-right font-mono text-fg-2">
                           {formatMoney(li.hourlyRate)}
@@ -1270,7 +1409,6 @@ function GenerateInvoiceModal({
     return `${last.getFullYear()}-${String(last.getMonth() + 1).padStart(2, '0')}-${String(last.getDate()).padStart(2, '0')}`;
   });
   const [gstMode, setGstMode] = useState<'auto' | 'cgst_sgst' | 'igst'>('auto');
-  const [notes, setNotes] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -1302,7 +1440,6 @@ function GenerateInvoiceModal({
         periodStart,
         periodEnd,
         gstMode,
-        notes: notes || undefined,
         dueDate: dueDate || undefined,
         invoiceNumber: invoiceNumber.trim() || undefined,
       });
@@ -1417,16 +1554,7 @@ function GenerateInvoiceModal({
           </div>
         </div>
 
-        <div>
-          <label className="block text-xs text-fg-2 mb-1">Notes / Terms</label>
-          <textarea
-            rows={2}
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="Payment due within 15 days of invoice date…"
-            className="w-full px-3 py-2 rounded-lg bg-surface border border-subtle text-fg text-sm focus:outline-none focus:border-brand"
-          />
-        </div>
+
 
         {error && (
           <div className="p-3 text-xs bg-danger-soft text-danger border border-danger/30 rounded-lg">
@@ -1472,15 +1600,13 @@ function SendInvoiceModal({
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const isGeneralInvoice =
-    Boolean(invoice?.invoiceNumber?.startsWith('GEN-')) ||
-    Boolean(invoice?.notes && invoice.notes.includes('[GENERAL_INVOICE]'));
+  const isGen = isGeneralInvoice(invoice);
 
   const [lastId, setLastId] = useState<string | null>(null);
   if (invoice && invoice.id !== lastId) {
     setLastId(invoice.id);
     setRecipientEmail(invoice.client?.email ?? '');
-    setIncludeAnnexure(!isGeneralInvoice);
+    setIncludeAnnexure(!isGen);
     setCustomMessage('');
     setError(null);
   }
@@ -1494,7 +1620,7 @@ function SendInvoiceModal({
     try {
       await api.post(`/api/invoices/${invoice.id}/send-email`, {
         recipientEmail: recipientEmail || undefined,
-        includeAnnexure: isGeneralInvoice ? false : includeAnnexure,
+        includeAnnexure: isGen ? false : includeAnnexure,
         customMessage: customMessage || undefined,
       });
       toast.success(
@@ -1531,7 +1657,7 @@ function SendInvoiceModal({
           />
         </div>
 
-        {!isGeneralInvoice ? (
+        {!isGen ? (
           <div className="flex items-center gap-2">
             <input
               type="checkbox"
@@ -1737,20 +1863,8 @@ function InvoiceGeneratorSection({
   const [clientEmail, setClientEmail] = useState('');
   const [clientPhone, setClientPhone] = useState('');
 
-  const buildDefaultNotes = (c?: Company | null) => {
-    const bankDetails =
-      c?.bankName && c?.bankAccount
-        ? `\n3. Remittance: Make payments via NEFT/RTGS to ${c.bankName}, A/C: ${c.bankAccount}${c.bankIfsc ? `, IFSC: ${c.bankIfsc}` : ''}.`
-        : '\n3. Make all payments via NEFT/RTGS to the company bank account.';
-    return `1. Payment is due within 15 days of invoice date.\n2. Please mention the invoice number on your remittance advice.${bankDetails}`;
-  };
-
-  // GST & Terms State (auto-derived from company bank details, with editable override)
+  // GST Mode State
   const [gstMode, setGstMode] = useState<'auto' | 'cgst_sgst' | 'igst' | 'none'>('auto');
-  const [customNotes, setCustomNotes] = useState<string | null>(null);
-  const defaultNotes = buildDefaultNotes(company);
-  const notes = customNotes !== null ? customNotes : defaultNotes;
-  const setNotes = (val: string) => setCustomNotes(val);
 
   // Manual Line Items State
   const [items, setItems] = useState<ManualLineItem[]>([
@@ -1829,7 +1943,6 @@ function InvoiceGeneratorSection({
     setClientEmail('');
     setClientPhone('');
     setGstMode('auto');
-    setCustomNotes(null);
     setItems([
       {
         id: `item-${Date.now()}`,
@@ -1914,7 +2027,6 @@ function InvoiceGeneratorSection({
         periodStart: periodStart || undefined,
         periodEnd: periodEnd || undefined,
         gstMode,
-        notes: notes.trim() || undefined,
         items: items.map((it) => ({
           description: it.description.trim(),
           quantity: Number(it.quantity) || 1,
@@ -1947,7 +2059,10 @@ function InvoiceGeneratorSection({
   };
 
   return (
-    <div className="mt-8 border border-subtle bg-surface rounded-2xl p-4 sm:p-6 lg:p-8 space-y-6 shadow-sm">
+    <div
+      id="manual-invoice-generator"
+      className="mt-8 border border-subtle bg-surface rounded-2xl p-4 sm:p-6 lg:p-8 space-y-6 shadow-sm"
+    >
       {/* Section Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-5 border-b border-subtle">
         <div className="flex items-center gap-3">
@@ -2434,34 +2549,19 @@ function InvoiceGeneratorSection({
           </div>
         </div>
 
-        {/* Row 5: Terms & Remarks & Automated Calculations (2-Column Grid) */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Notes & Terms */}
-          <div className="bg-elevated/40 border border-subtle rounded-xl p-4 sm:p-5 flex flex-col justify-between space-y-3">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between pb-2 border-b border-subtle">
-                <label className="block text-xs font-bold text-fg uppercase tracking-wider">
-                  Terms & Conditions / Remarks
-                </label>
-                <span className="text-[10px] text-brand bg-brand/10 font-semibold px-2 py-0.5 rounded border border-brand/20">
-                  Bank & Remittance Auto-detected
-                </span>
-              </div>
-              <textarea
-                rows={6}
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Payment terms, remittance reference, etc."
-                className="w-full px-3 py-2 rounded-lg bg-surface border border-subtle text-fg text-xs focus:outline-none focus:border-brand resize-none leading-relaxed"
-              />
-            </div>
-            <div className="p-2.5 rounded-lg bg-surface/70 border border-subtle text-[11px] text-muted">
-              Company profile and bank remittance details are automatically detected from your account settings and included in the invoice PDF and ledger.
-            </div>
+        {/* Row 5: Automated Calculations Summary */}
+        <div className="flex flex-col lg:flex-row items-start justify-between gap-6 pt-2">
+          <div className="text-xs text-muted max-w-md space-y-2">
+            <span className="font-semibold text-fg uppercase tracking-wider text-xs block">
+              Live Automated Calculations
+            </span>
+            <p className="leading-relaxed">
+              Subtotal, GST breakdown (CGST/SGST or IGST), and total invoice value are computed live from your service line items and billing state codes. Company profile &amp; default bank details will be automatically applied on the PDF invoice.
+            </p>
           </div>
 
           {/* Automated Calculations Summary Card */}
-          <div className="bg-elevated/60 border border-subtle rounded-xl p-5 space-y-4 flex flex-col justify-between">
+          <div className="w-full lg:max-w-xl bg-elevated/60 border border-subtle rounded-xl p-5 space-y-4 flex flex-col justify-between shadow-sm">
             <div>
               <div className="flex items-center justify-between pb-3 border-b border-subtle">
                 <span className="text-xs font-bold text-fg uppercase tracking-wider">
