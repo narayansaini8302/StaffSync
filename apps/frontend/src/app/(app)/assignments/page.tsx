@@ -112,9 +112,85 @@ export default function AssignmentsPage() {
         </div>
       </div>
 
-      {/* Table */}
+      {/* Assignments List / Table */}
       <div className="bg-surface border border-subtle rounded-xl overflow-hidden shadow-sm">
-        <div className="overflow-x-auto w-full">
+        {/* Mobile Assignment Cards (< md screens: no horizontal scrolling) */}
+        <div className="md:hidden divide-y divide-subtle">
+          {query.isLoading && (
+            <div className="p-8 text-center text-muted">
+              <Loader2 size={20} className="inline animate-spin text-brand mr-2" />
+              Loading assignments...
+            </div>
+          )}
+          {!query.isLoading && assignments.length === 0 && (
+            <div className="p-8 text-center text-muted">
+              No assignments yet
+            </div>
+          )}
+          {assignments.map((a) => (
+            <div key={a.id} className="p-4 space-y-3 hover:bg-hover/40 transition">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="text-fg font-semibold text-sm truncate">
+                    {a.employee
+                      ? `${a.employee.firstName} ${a.employee.lastName}`
+                      : '—'}
+                  </div>
+                  <div className="font-mono text-xs text-muted font-medium mt-0.5">
+                    {a.employee?.employeeCode ?? ''}
+                  </div>
+                </div>
+                <div>
+                  {a.isActive ? (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-success-soft text-success border border-success/30">
+                      Active
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-elevated text-muted border border-subtle">
+                      Inactive
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Client & Category */}
+              <div className="flex flex-wrap items-center gap-2 text-xs">
+                <span className="text-brand font-medium flex items-center gap-1">
+                  <Briefcase size={12} /> {a.client?.name ?? '—'}
+                </span>
+                {a.employee?.category && (
+                  <span className="px-2 py-0.5 rounded bg-elevated text-fg-2 border border-subtle">
+                    {categoryLabels[a.employee.category]}
+                  </span>
+                )}
+              </div>
+
+              {/* Dates & Actions */}
+              <div className="flex items-center justify-between gap-2 pt-2 border-t border-subtle/40 text-xs text-fg-2">
+                <div>
+                  <span className="text-[10px] text-muted block uppercase font-semibold">Duration</span>
+                  <span className="font-mono">
+                    {a.startDate.slice(0, 10)} → {a.endDate ? a.endDate.slice(0, 10) : 'Ongoing'}
+                  </span>
+                </div>
+                <button
+                  onClick={() => {
+                    if (confirm('Remove this assignment?')) {
+                      remove.mutate(a.id);
+                    }
+                  }}
+                  className="p-2 rounded-lg bg-elevated hover:bg-danger-soft text-fg-2 hover:text-danger transition"
+                  title="Remove assignment"
+                >
+                  <Trash2 size={15} />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Desktop Table View (>= md screens) */}
+        <div className="hidden md:block overflow-x-auto w-full">
           <table className="w-full text-sm min-w-[650px]">
           <thead className="bg-elevated/50 border-b border-subtle">
             <tr className="text-fg-2 text-left">

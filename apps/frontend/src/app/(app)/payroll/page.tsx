@@ -94,7 +94,76 @@ export default function PayrollPage() {
       </div>
 
       <div className="bg-surface border border-subtle rounded-xl overflow-hidden shadow-sm">
-        <div className="overflow-x-auto w-full">
+        {/* Mobile Payroll Run Cards (< md screens: no horizontal scrolling) */}
+        <div className="md:hidden divide-y divide-subtle">
+          {runsQuery.isLoading && (
+            <div className="p-8 text-center text-muted">
+              <Loader2 size={20} className="inline animate-spin text-brand mr-2" />
+              Loading payroll runs...
+            </div>
+          )}
+          {!runsQuery.isLoading && runs.length === 0 && (
+            <div className="p-8 text-center text-muted">
+              No payroll runs yet. Click "Run Payroll" to generate one.
+            </div>
+          )}
+          {runs.map((run) => (
+            <div key={run.id} className="p-4 space-y-3 hover:bg-hover/40 transition">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <div className="font-semibold text-fg text-sm">
+                    {monthLabel(run.periodStart)}
+                  </div>
+                  <div className="text-xs text-muted mt-0.5">
+                    {run.totalEmployees} employee{run.totalEmployees === 1 ? '' : 's'}
+                  </div>
+                </div>
+                <div>
+                  <StatusBadge status={run.status} />
+                </div>
+              </div>
+
+              {/* Financial snapshot */}
+              <div className="grid grid-cols-2 gap-2 text-xs pt-1 border-t border-subtle/40">
+                <div>
+                  <span className="text-muted block text-[10px] uppercase font-semibold">Total Gross</span>
+                  <span className="font-mono text-fg font-medium">{formatMoney(run.totalGross)}</span>
+                </div>
+                <div className="text-right">
+                  <span className="text-muted block text-[10px] uppercase font-semibold">Total Net</span>
+                  <span className="font-mono text-success font-semibold">{formatMoney(run.totalNet)}</span>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center justify-between gap-2 pt-1 border-t border-subtle/40">
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  className="w-full justify-center"
+                  onClick={() => setViewingRun(run)}
+                >
+                  View payslips ({run.totalEmployees})
+                </Button>
+                <button
+                  onClick={() => deleteRun(run)}
+                  disabled={deletingId === run.id}
+                  className="p-2 rounded-lg bg-elevated hover:bg-danger-soft text-fg-2 hover:text-danger disabled:opacity-50 transition shrink-0"
+                  title="Delete payroll run"
+                >
+                  {deletingId === run.id ? (
+                    <Loader2 size={16} className="animate-spin text-danger" />
+                  ) : (
+                    <Trash2 size={16} />
+                  )}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Desktop Table View (>= md screens) */}
+        <div className="hidden md:block overflow-x-auto w-full">
           <table className="w-full text-sm min-w-[620px]">
           <thead className="bg-elevated/50 border-b border-subtle">
             <tr className="text-fg-2 text-left">
@@ -412,7 +481,104 @@ function RunDetailsModal({
             </div>
 
             <div className="border border-subtle rounded-lg overflow-hidden">
-              <div className="overflow-x-auto w-full">
+              {/* Mobile Payslip Cards (< md screens) */}
+              <div className="md:hidden divide-y divide-subtle">
+                {query.isLoading && (
+                  <div className="p-8 text-center text-muted">
+                    <Loader2 size={18} className="inline animate-spin mr-2" /> Loading payslips...
+                  </div>
+                )}
+                {query.data?.payslips.map((slip) => (
+                  <div key={slip.id} className="p-3.5 space-y-2.5 hover:bg-hover/40 transition">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="font-semibold text-fg text-sm truncate">{slip.employeeName}</div>
+                        <div className="text-xs text-muted flex items-center gap-1.5 mt-0.5">
+                          <span className="font-mono">{slip.employeeCode}</span>
+                          {slip.email && (
+                            <>
+                              <span>•</span>
+                              <span className="truncate">{slip.email}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      <div className="shrink-0">
+                        {slip.emailedAt ? (
+                          <span
+                            className="inline-flex items-center gap-1 text-[11px] text-success font-medium bg-success-soft px-2 py-0.5 rounded-full border border-success/30"
+                            title={`Sent: ${new Date(slip.emailedAt).toLocaleString()}`}
+                          >
+                            <CheckCircle2 size={11} /> Sent
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center text-[11px] text-muted bg-elevated px-2 py-0.5 rounded-full border border-subtle">
+                            Not sent
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Attendance summary pill */}
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="px-2 py-0.5 rounded bg-elevated text-fg font-medium border border-subtle">
+                        {Number(slip.presentDays)}d Present
+                      </span>
+                      {Number(slip.absentDays ?? 0) > 0 && (
+                        <span className="px-2 py-0.5 rounded bg-danger-soft text-danger font-medium border border-danger/20">
+                          {Number(slip.absentDays)}d Absent
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Pay breakdown */}
+                    <div className="grid grid-cols-3 gap-2 text-xs pt-1 border-t border-subtle/40">
+                      <div>
+                        <span className="text-[10px] text-muted uppercase font-semibold block">Gross</span>
+                        <span className="font-mono text-fg font-medium">{formatMoney(slip.grossPay)}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-muted uppercase font-semibold block">Deductions</span>
+                        <span className="font-mono text-danger font-medium">-{formatMoney(slip.totalDeductions)}</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-[10px] text-muted uppercase font-semibold block">Net Salary</span>
+                        <span className="font-mono text-success font-bold">{formatMoney(slip.netPay)}</span>
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex items-center justify-end gap-1.5 pt-1 border-t border-subtle/40">
+                      {slip.email && (
+                        <button
+                          onClick={() => setEmailingSlip(slip)}
+                          className="px-2.5 py-1.5 rounded-lg bg-elevated hover:bg-hover text-fg-2 hover:text-brand text-xs font-medium flex items-center gap-1 transition"
+                          title="Send payslip email"
+                        >
+                          <Mail size={13} />
+                          <span>Email</span>
+                        </button>
+                      )}
+                      <button
+                        onClick={() => downloadPdf(slip)}
+                        disabled={downloadingId === slip.id}
+                        className="px-2.5 py-1.5 rounded-lg bg-elevated hover:bg-hover text-fg-2 hover:text-brand text-xs font-medium flex items-center gap-1 disabled:opacity-50 transition"
+                        title="Download PDF"
+                      >
+                        {downloadingId === slip.id ? (
+                          <Loader2 size={13} className="animate-spin" />
+                        ) : (
+                          <Download size={13} />
+                        )}
+                        <span>PDF</span>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop Table View (>= md screens) */}
+              <div className="hidden md:block overflow-x-auto w-full">
                 <table className="w-full text-sm min-w-[680px]">
                 <thead className="bg-elevated/50 border-b border-subtle">
                   <tr className="text-fg-2 text-left">

@@ -168,7 +168,160 @@ export default function EmployeesPage() {
 
       {/* Table */}
       <div className="bg-surface border border-subtle rounded-xl overflow-hidden shadow-sm">
-        <div className="overflow-x-auto w-full">
+        {/* Mobile Employee Cards (< md screens: no horizontal scrolling) */}
+        <div className="md:hidden divide-y divide-subtle">
+          {query.isLoading && (
+            <div className="p-8 text-center text-muted">
+              <Loader2 size={20} className="inline animate-spin text-brand mr-2" />
+              Loading employees...
+            </div>
+          )}
+          {!query.isLoading && query.data?.data.length === 0 && (
+            <div className="p-8 text-center text-muted">
+              No employees found
+            </div>
+          )}
+          {query.data?.data.map((emp: any) => (
+            <div key={emp.id} className="p-4 space-y-3 hover:bg-hover/40 transition">
+              {/* Header: Name, Code & Status */}
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="font-semibold text-fg text-sm truncate">
+                    {[emp.firstName, emp.lastName].filter(Boolean).join(' ')}
+                  </div>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="font-mono text-xs text-muted font-medium">
+                      {emp.employeeCode}
+                    </span>
+                    {emp.fatherName && (
+                      <span className="text-[11px] text-muted truncate">
+                        • s/o {emp.fatherName}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="shrink-0">
+                  {emp.isActive ? (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-success-soft text-success border border-success/30">
+                      Active
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-elevated text-muted border border-subtle">
+                      Inactive
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Assignment & Category */}
+              <div className="flex flex-wrap items-center gap-2 text-xs">
+                <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-elevated text-fg-2 border border-subtle font-medium">
+                  {emp.category === 'CUSTOM'
+                    ? emp.customCategory || 'Custom'
+                    : categoryLabels[(emp.category as EmployeeCategory) ?? 'HOUSEKEEPING'] || emp.category}
+                </span>
+
+                {emp.assignedClient ? (
+                  <span className="text-brand font-medium flex items-center gap-1">
+                    <Briefcase size={12} /> {emp.assignedClient.name}
+                  </span>
+                ) : (
+                  <span className="text-amber-500 font-semibold text-[11px]">
+                    ⚠️ Not assigned to client
+                  </span>
+                )}
+
+                {emp.pfApplicable !== false && (
+                  <span className="text-[9px] px-1.5 py-0.2 rounded bg-brand/10 text-brand font-semibold">PF</span>
+                )}
+                {emp.esiApplicable !== false && (
+                  <span className="text-[9px] px-1.5 py-0.2 rounded bg-indigo-500/10 text-indigo-500 font-semibold">ESI</span>
+                )}
+              </div>
+
+              {/* Contact info */}
+              {(emp.phone || emp.email) && (
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-fg-2 pt-1 border-t border-subtle/40">
+                  {emp.phone && (
+                    <a href={`tel:${emp.phone}`} className="flex items-center gap-1 hover:text-brand">
+                      <span>📞</span> {emp.phone}
+                    </a>
+                  )}
+                  {emp.email && (
+                    <a href={`mailto:${emp.email}`} className="flex items-center gap-1 hover:text-brand truncate max-w-[220px]">
+                      <span>✉️</span> {emp.email}
+                    </a>
+                  )}
+                </div>
+              )}
+
+              {/* Action Buttons: Large touch-friendly targets */}
+              <div className="flex items-center justify-end gap-1.5 pt-1">
+                <button
+                  onClick={() => downloadJoiningLetter(emp)}
+                  className="px-2.5 py-1.5 rounded-lg bg-elevated hover:bg-hover text-fg-2 hover:text-brand text-xs font-medium flex items-center gap-1 transition"
+                  title="Download joining letter"
+                >
+                  <Download size={13} />
+                  <span>Letter</span>
+                </button>
+                {emp.email && (
+                  <button
+                    onClick={() => setEmailingLetterEmp(emp)}
+                    className="p-1.5 rounded-lg bg-elevated hover:bg-hover text-fg-2 hover:text-brand transition"
+                    title="Email joining letter"
+                  >
+                    <Mail size={14} />
+                  </button>
+                )}
+                <button
+                  onClick={() => setEditing(emp)}
+                  className="px-2.5 py-1.5 rounded-lg bg-elevated hover:bg-hover text-fg-2 hover:text-brand text-xs font-medium flex items-center gap-1 transition"
+                  title="Edit employee"
+                >
+                  <Pencil size={13} />
+                  <span>Edit</span>
+                </button>
+                {emp.isActive ? (
+                  <button
+                    onClick={() => {
+                      if (
+                        confirm(
+                          `Deactivate ${emp.firstName} ${emp.lastName}? You can reactivate them later.`,
+                        )
+                      ) {
+                        deactivate.mutate(emp.id);
+                      }
+                    }}
+                    className="p-1.5 rounded-lg bg-elevated hover:bg-danger-soft text-fg-2 hover:text-danger transition"
+                    title="Deactivate"
+                  >
+                    <UserX size={14} />
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      if (
+                        confirm(
+                          `Reactivate ${emp.firstName} ${emp.lastName}?`,
+                        )
+                      ) {
+                        reactivate.mutate(emp.id);
+                      }
+                    }}
+                    className="p-1.5 rounded-lg bg-elevated hover:bg-success-soft text-fg-2 hover:text-success transition"
+                    title="Reactivate"
+                  >
+                    <UserCheck size={14} />
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Desktop Table View (>= md screens) */}
+        <div className="hidden md:block overflow-x-auto w-full">
           <table className="w-full text-sm min-w-[700px]">
           <thead className="bg-elevated/50 border-b border-subtle">
             <tr className="text-fg-2 text-left">

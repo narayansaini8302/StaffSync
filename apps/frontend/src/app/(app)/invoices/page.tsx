@@ -290,9 +290,150 @@ export default function InvoicesPage() {
         </div>
       </div>
 
-      {/* Invoices Table */}
+      {/* Invoices List / Table */}
       <div className="bg-surface border border-subtle rounded-xl overflow-hidden shadow-sm">
-        <div className="overflow-x-auto w-full">
+        {/* Mobile Invoice Cards (< md screens: no horizontal scrolling) */}
+        <div className="md:hidden divide-y divide-subtle">
+          {query.isLoading && (
+            <div className="p-8 text-center text-muted">
+              <Loader2 size={24} className="inline animate-spin text-brand mr-2" />
+              Loading invoices and payment ledger...
+            </div>
+          )}
+          {!query.isLoading && invoices.length === 0 && (
+            <div className="p-8 text-center text-muted">
+              No invoices yet. Click "Generate Invoice" above to create one.
+            </div>
+          )}
+          {invoices.map((inv) => {
+            const cfg = statusConfig[inv.status] || statusConfig.DRAFT;
+            const Icon = cfg.icon;
+            const total = Number(inv.totalAmount);
+            const paid = Number(inv.paidAmount || 0);
+            const pending = Math.max(0, total - paid);
+
+            return (
+              <div key={inv.id} className="p-4 space-y-3 hover:bg-hover/40 transition">
+                {/* Header: Invoice # and Status */}
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <div className="text-fg font-mono font-bold text-sm">
+                      {inv.invoiceNumber}
+                    </div>
+                    <div className="text-[11px] text-muted mt-0.5">
+                      Issued: {inv.issuedAt.slice(0, 10)} • {monthLabel(inv.periodStart)}
+                    </div>
+                  </div>
+                  <span
+                    className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs border ${cfg.cls}`}
+                  >
+                    <Icon size={12} />
+                    {cfg.label}
+                  </span>
+                </div>
+
+                {/* Client Name */}
+                <div className="text-xs">
+                  <span className="text-muted block text-[10px] uppercase font-semibold">Client</span>
+                  <span className="font-semibold text-fg text-sm">{inv.client?.name ?? '—'}</span>
+                </div>
+
+                {/* 3-Column Financial Snapshot */}
+                <div className="grid grid-cols-3 gap-2 text-xs pt-1 border-t border-subtle/40">
+                  <div>
+                    <span className="text-[10px] text-muted uppercase font-semibold block">Total Billed</span>
+                    <span className="font-mono font-semibold text-fg">{formatMoney(total)}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-muted uppercase font-semibold block">Paid</span>
+                    <span className="font-mono font-semibold text-success">
+                      {paid > 0 ? formatMoney(paid) : '₹0.00'}
+                    </span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[10px] text-muted uppercase font-semibold block">On Pending</span>
+                    {pending > 0 ? (
+                      <span className="font-mono font-semibold text-warning">
+                        {formatMoney(pending)}
+                      </span>
+                    ) : (
+                      <span className="font-semibold text-success inline-flex items-center justify-end gap-0.5">
+                        <CheckCircle2 size={12} /> Settled
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Touch-Friendly Action Buttons */}
+                <div className="flex flex-wrap items-center justify-between gap-1.5 pt-1 border-t border-subtle/40">
+                  {pending > 0 && inv.status !== 'CANCELLED' ? (
+                    <button
+                      onClick={() => setPayingInvoice(inv)}
+                      className="px-2.5 py-1.5 rounded-lg bg-success-soft text-success hover:bg-success/20 border border-success/30 transition text-xs font-semibold flex items-center gap-1"
+                      title="Record Payment Taken"
+                    >
+                      <CreditCard size={13} />
+                      <span>Add Pay</span>
+                    </button>
+                  ) : <div />}
+
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => setViewing(inv)}
+                      className="p-2 rounded-lg bg-elevated hover:bg-hover text-fg-2 hover:text-brand transition"
+                      title="View details & payment history"
+                    >
+                      <Eye size={15} />
+                    </button>
+                    <button
+                      onClick={() => setEmailingInvoice(inv)}
+                      className="p-2 rounded-lg bg-elevated hover:bg-hover text-fg-2 hover:text-brand transition"
+                      title="Email invoice to client"
+                    >
+                      <Mail size={15} />
+                    </button>
+                    <button
+                      onClick={() => downloadPdf(inv.id, 'pdf', 'invoice')}
+                      disabled={downloadingId === inv.id + 'pdf'}
+                      className="p-2 rounded-lg bg-elevated hover:bg-hover text-fg-2 hover:text-brand disabled:opacity-50 transition"
+                      title="Download Tax Invoice PDF"
+                    >
+                      {downloadingId === inv.id + 'pdf' ? (
+                        <Loader2 size={15} className="animate-spin" />
+                      ) : (
+                        <Download size={15} />
+                      )}
+                    </button>
+                    <button
+                      onClick={() =>
+                        downloadPdf(inv.id, 'annexure/pdf', 'annexure')
+                      }
+                      disabled={downloadingId === inv.id + 'annexure/pdf'}
+                      className="p-2 rounded-lg bg-elevated hover:bg-hover text-fg-2 hover:text-brand disabled:opacity-50 transition"
+                      title="Download Employee Annexure PDF"
+                    >
+                      {downloadingId === inv.id + 'annexure/pdf' ? (
+                        <Loader2 size={15} className="animate-spin" />
+                      ) : (
+                        <FileSpreadsheet size={15} />
+                      )}
+                    </button>
+                    <button
+                      onClick={() => deleteInvoice(inv.id)}
+                      className="p-2 rounded-lg bg-elevated hover:bg-danger-soft text-fg-2 hover:text-danger transition"
+                      title="Delete invoice"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Desktop Table View (>= md screens) */}
+        <div className="hidden md:block overflow-x-auto w-full">
           <table className="w-full text-sm min-w-[720px]">
             <thead className="bg-elevated/50 border-b border-subtle">
               <tr className="text-fg-2 text-left">

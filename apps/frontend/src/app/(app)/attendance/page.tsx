@@ -1154,7 +1154,70 @@ function DailyView() {
       </div>
 
       <div className="bg-surface border border-subtle rounded-xl overflow-hidden shadow-sm">
-        <div className="overflow-x-auto w-full">
+        {/* Mobile Attendance Records Cards (< md screens) */}
+        <div className="md:hidden divide-y divide-subtle">
+          {query.isLoading && (
+            <div className="p-8 text-center text-muted">
+              <Loader2 size={20} className="inline animate-spin text-brand mr-2" />
+              Loading attendance records...
+            </div>
+          )}
+          {!query.isLoading && query.data?.data.length === 0 && (
+            <div className="p-8 text-center text-muted">
+              No attendance records in this range
+            </div>
+          )}
+          {query.data?.data.map((d) => {
+            const emp = empMap.get(d.employeeId) as any;
+            return (
+              <div key={d.id} className="p-3.5 space-y-2 hover:bg-hover/40 transition">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="font-semibold text-fg text-sm truncate">
+                      {emp ? `${emp.firstName} ${emp.lastName}` : d.employeeId.slice(0, 8) + '...'}
+                    </div>
+                    <div className="flex items-center gap-2 mt-0.5 text-xs text-muted">
+                      <span className="font-mono">{d.date.slice(0, 10)}</span>
+                      {emp && (
+                        <>
+                          <span>•</span>
+                          <span className="font-mono">{emp.employeeCode}</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <StatusBadge status={d.status} />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 text-xs pt-1 border-t border-subtle/40">
+                  <div>
+                    <span className="text-[10px] text-muted uppercase font-semibold block">In</span>
+                    <span className="font-mono text-fg font-medium">
+                      {d.firstIn ? new Date(d.firstIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-muted uppercase font-semibold block">Out</span>
+                    <span className="font-mono text-fg font-medium">
+                      {d.lastOut ? new Date(d.lastOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
+                    </span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[10px] text-muted uppercase font-semibold block">Total</span>
+                    <span className="font-medium text-brand font-mono">
+                      {formatMinutes(d.totalMinutes)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Desktop Table View (>= md screens) */}
+        <div className="hidden md:block overflow-x-auto w-full">
           <table className="w-full text-sm min-w-[620px]">
           <thead className="bg-elevated/50 border-b border-subtle">
             <tr className="text-fg-2 text-left">
@@ -1331,7 +1394,87 @@ function LogsView() {
       </div>
 
       <div className="bg-surface border border-subtle rounded-xl overflow-hidden shadow-sm">
-        <div className="overflow-x-auto w-full">
+        {/* Mobile Audit Log Cards (< md screens) */}
+        <div className="md:hidden divide-y divide-subtle">
+          {query.isLoading && (
+            <div className="p-8 text-center text-muted">
+              <Loader2 size={20} className="inline animate-spin text-brand mr-2" />
+              Loading audit logs...
+            </div>
+          )}
+          {!query.isLoading && query.data?.data.length === 0 && (
+            <div className="p-8 text-center text-muted">
+              No logs in this range
+            </div>
+          )}
+          {query.data?.data.map((log) => (
+            <div key={log.id} className="p-3.5 space-y-2 hover:bg-hover/40 transition">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="font-semibold text-fg text-sm truncate">
+                    {log.employee
+                      ? `${log.employee.firstName} ${log.employee.lastName}`
+                      : log.employeeId.slice(0, 8) + '...'}
+                  </div>
+                  <div className="flex items-center gap-1.5 mt-0.5 text-xs text-muted">
+                    <span className="font-mono">{new Date(log.timestamp).toLocaleString()}</span>
+                    {log.employee && (
+                      <>
+                        <span>•</span>
+                        <span className="font-mono">{log.employee.employeeCode}</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <span
+                    className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border ${
+                      log.direction === 'IN'
+                        ? 'bg-success-soft text-success border-success/30'
+                        : 'bg-warning-soft text-warning border-warning/30'
+                    }`}
+                  >
+                    {log.direction}
+                  </span>
+                </div>
+              </div>
+
+              {/* Source & Notes */}
+              <div className="flex items-center justify-between gap-2 text-xs pt-1 border-t border-subtle/40">
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 rounded bg-elevated text-fg-2 font-mono text-[11px] border border-subtle">
+                    {log.source}
+                  </span>
+                  {log.notes && (
+                    <span className="text-muted text-[11px] truncate max-w-[150px]">
+                      {log.notes}
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setEditingLog(log)}
+                    className="p-1.5 rounded-lg bg-elevated hover:bg-hover text-fg-2 hover:text-brand transition"
+                    title="Edit log"
+                  >
+                    <Pencil size={13} />
+                  </button>
+                  <button
+                    onClick={() => quickDelete(log.id)}
+                    className="p-1.5 rounded-lg bg-elevated hover:bg-danger-soft text-fg-2 hover:text-danger transition"
+                    title="Delete log"
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Desktop Table View (>= md screens) */}
+        <div className="hidden md:block overflow-x-auto w-full">
           <table className="w-full text-sm min-w-[640px]">
           <thead className="bg-elevated/50 border-b border-subtle">
             <tr className="text-fg-2 text-left">

@@ -88,9 +88,96 @@ export default function ClientsPage() {
         />
       </div>
 
-      {/* Table */}
+      {/* Clients List / Table */}
       <div className="bg-surface border border-subtle rounded-xl overflow-hidden shadow-sm">
-        <div className="overflow-x-auto w-full">
+        {/* Mobile Client Cards (< md screens) */}
+        <div className="md:hidden divide-y divide-subtle">
+          {query.isLoading && (
+            <div className="p-8 text-center text-muted">
+              <Loader2 size={20} className="inline animate-spin text-brand mr-2" />
+              Loading clients...
+            </div>
+          )}
+          {!query.isLoading && clients.length === 0 && (
+            <div className="p-8 text-center text-muted">
+              {search
+                ? 'No clients match your search'
+                : 'No clients yet. Add one to get started.'}
+            </div>
+          )}
+          {clients.map((c) => (
+            <div key={c.id} className="p-4 space-y-3 hover:bg-hover/40 transition">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="text-fg font-semibold text-sm truncate">{c.name}</div>
+                  {c.email && (
+                    <div className="text-xs text-muted truncate mt-0.5">{c.email}</div>
+                  )}
+                </div>
+                {c.stateCode && (
+                  <span className="shrink-0 px-2 py-0.5 rounded text-[11px] font-mono bg-elevated text-fg-2 border border-subtle">
+                    State: {c.stateCode}
+                  </span>
+                )}
+              </div>
+
+              {/* GSTIN & Stats */}
+              <div className="grid grid-cols-2 gap-2 text-xs pt-1 border-t border-subtle/40">
+                <div>
+                  <span className="text-muted block text-[10px] uppercase font-semibold">GSTIN</span>
+                  <span className="font-mono text-fg-2 font-medium">{c.gstin || '—'}</span>
+                </div>
+                <div className="flex items-center gap-3 justify-end text-xs">
+                  <div className="text-center">
+                    <span className="font-bold text-fg block">{c._count?.assignments ?? 0}</span>
+                    <span className="text-[10px] text-muted">Staff</span>
+                  </div>
+                  <div className="text-center">
+                    <span className="font-bold text-brand block">{c._count?.invoices ?? 0}</span>
+                    <span className="text-[10px] text-muted">Invoices</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-end gap-1.5 pt-1 border-t border-subtle/40">
+                <Link
+                  href={`/assignments?clientId=${c.id}`}
+                  className="px-2.5 py-1.5 rounded-lg bg-elevated hover:bg-hover text-fg-2 hover:text-brand text-xs font-medium flex items-center gap-1 transition"
+                  title="View assignments"
+                >
+                  <ExternalLink size={13} />
+                  <span>Assignments ({c._count?.assignments ?? 0})</span>
+                </Link>
+                <button
+                  onClick={() => setEditing(c)}
+                  className="p-1.5 rounded-lg bg-elevated hover:bg-hover text-fg-2 hover:text-brand transition"
+                  title="Edit client"
+                >
+                  <Pencil size={14} />
+                </button>
+                <button
+                  onClick={() => {
+                    if (
+                      confirm(
+                        `Delete "${c.name}"? This cannot be undone. Their assignments and invoices will be removed.`,
+                      )
+                    ) {
+                      remove.mutate(c.id);
+                    }
+                  }}
+                  className="p-1.5 rounded-lg bg-elevated hover:bg-danger-soft text-fg-2 hover:text-danger transition"
+                  title="Delete client"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Desktop Table View (>= md screens) */}
+        <div className="hidden md:block overflow-x-auto w-full">
           <table className="w-full text-sm min-w-[620px]">
           <thead className="bg-elevated/50 border-b border-subtle">
             <tr className="text-fg-2 text-left">

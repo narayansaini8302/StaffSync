@@ -130,7 +130,10 @@ select option {
    Body
    ========================================================================== */
 
+html,
 body {
+  overflow-x: hidden;
+  max-width: 100vw;
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
