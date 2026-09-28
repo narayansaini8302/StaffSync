@@ -123,8 +123,16 @@ employeeRouter.patch('/:id', requireRole('ADMIN', 'HR'), async (req, res) => {
       return res.status(400).json({ error: "Father's name is required" });
     if (e.message === 'EMPLOYEE_CODE_TAKEN')
       return res.status(409).json({ error: 'Employee code already in use' });
-    if (e?.code === 'P2002')
-      return res.status(409).json({ error: 'Conflict', target: e.meta?.target });
+    if (e?.code === 'P2002') {
+      const target = Array.isArray(e.meta?.target) ? e.meta.target : [e.meta?.target];
+      if (target.some((t: string) => String(t).includes('employeeCode'))) {
+        return res.status(409).json({ error: 'Employee code already in use' });
+      }
+      if (target.some((t: string) => String(t).includes('email'))) {
+        return res.status(409).json({ error: 'An employee with this email already exists' });
+      }
+      return res.status(409).json({ error: 'A duplicate record exists with this information', target: e.meta?.target });
+    }
     res.status(500).json({ error: 'Failed to update employee' });
   }
 });

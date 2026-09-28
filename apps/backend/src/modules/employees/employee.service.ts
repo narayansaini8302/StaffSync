@@ -250,18 +250,64 @@ export async function updateEmployee(
         where: { id: input.clientId, companyId },
       });
       if (client) {
-        await prisma.employeeAssignment.updateMany({
+        const currentActive = await prisma.employeeAssignment.findFirst({
           where: { employeeId: id, isActive: true },
-          data: { isActive: false, endDate: new Date() },
         });
-        await prisma.employeeAssignment.create({
-          data: {
-            clientId: input.clientId,
-            employeeId: id,
-            startDate: new Date(updatedEmployee.dateOfJoining),
-            isActive: true,
-          },
-        });
+
+        const targetStartDate = new Date(updatedEmployee.dateOfJoining);
+
+        if (currentActive && currentActive.clientId === input.clientId) {
+          // Employee is already actively assigned to this client.
+          // Update startDate if dateOfJoining changed and doesn't conflict
+          if (currentActive.startDate.getTime() !== targetStartDate.getTime()) {
+            const conflict = await prisma.employeeAssignment.findFirst({
+              where: {
+                clientId: input.clientId,
+                employeeId: id,
+                startDate: targetStartDate,
+                NOT: { id: currentActive.id },
+              },
+            });
+            if (!conflict) {
+              await prisma.employeeAssignment.update({
+                where: { id: currentActive.id },
+                data: { startDate: targetStartDate },
+              });
+            }
+          }
+        } else {
+          // Changing client or assigning for first time.
+          // Deactivate previous active assignments
+          await prisma.employeeAssignment.updateMany({
+            where: { employeeId: id, isActive: true },
+            data: { isActive: false, endDate: new Date() },
+          });
+
+          // Check if an assignment already exists for this client, employee, and startDate
+          const existingAssignment = await prisma.employeeAssignment.findFirst({
+            where: {
+              clientId: input.clientId,
+              employeeId: id,
+              startDate: targetStartDate,
+            },
+          });
+
+          if (existingAssignment) {
+            await prisma.employeeAssignment.update({
+              where: { id: existingAssignment.id },
+              data: { isActive: true, endDate: null },
+            });
+          } else {
+            await prisma.employeeAssignment.create({
+              data: {
+                clientId: input.clientId,
+                employeeId: id,
+                startDate: targetStartDate,
+                isActive: true,
+              },
+            });
+          }
+        }
       }
     } else {
       await prisma.employeeAssignment.updateMany({
