@@ -342,8 +342,10 @@ function DailySheetView() {
     totalHours: 0,
   };
 
+  const [attendanceSectionFilter, setAttendanceSectionFilter] = useState<'ALL' | 'UNMARKED' | 'MARKED'>('ALL');
+
   // Filter employees by search & category
-  const filteredEmployees = (query.data?.employees ?? []).filter((emp) => {
+  const searchedEmployees = (query.data?.employees ?? []).filter((emp) => {
     const fullName = `${emp.firstName} ${emp.lastName}`.toLowerCase();
     const code = emp.employeeCode.toLowerCase();
     const matchesSearch =
@@ -356,6 +358,16 @@ function DailySheetView() {
 
     return matchesSearch && matchesCategory;
   });
+
+  const unmarkedEmployees = searchedEmployees.filter((e) => !e.attendance);
+  const markedEmployees = searchedEmployees.filter((e) => !!e.attendance);
+
+  const filteredEmployees =
+    attendanceSectionFilter === 'UNMARKED'
+      ? unmarkedEmployees
+      : attendanceSectionFilter === 'MARKED'
+      ? markedEmployees
+      : searchedEmployees;
 
   const categories = Array.from(
     new Set((query.data?.employees ?? []).map((e) => e.category)),
@@ -448,28 +460,33 @@ function DailySheetView() {
           label="Total Active Staff"
           value={stats.totalEmployees}
           color="neutral"
+          onClick={() => setAttendanceSectionFilter('ALL')}
         />
         <StatCard
           label="Full Day (8h)"
           value={stats.presentCount}
           color="success"
           sub={`${stats.presentCount * 8}h`}
+          onClick={() => setAttendanceSectionFilter('MARKED')}
         />
         <StatCard
           label="Half Day (4h)"
           value={stats.halfDayCount}
           color="warning"
           sub={`${stats.halfDayCount * 4}h`}
+          onClick={() => setAttendanceSectionFilter('MARKED')}
         />
         <StatCard
           label="Absent (0h)"
           value={stats.absentCount}
           color="danger"
+          onClick={() => setAttendanceSectionFilter('MARKED')}
         />
         <StatCard
           label="Unmarked"
           value={stats.unmarkedCount}
           color={stats.unmarkedCount > 0 ? 'warning' : 'neutral'}
+          onClick={() => setAttendanceSectionFilter('UNMARKED')}
         />
         <StatCard
           label="Total Hours Worked"
@@ -514,22 +531,65 @@ function DailySheetView() {
         </div>
       </div>
 
-      {/* ========================================================================= */}
-      {/* Mobile Responsive Cards (No Horizontal Scrolling, Touch-Friendly Dropdown) */}
-      {/* ========================================================================= */}
-      <div className="block md:hidden bg-surface border border-subtle rounded-xl divide-y divide-subtle shadow-sm overflow-hidden">
-        {query.isLoading && (
-          <div className="p-8 text-center text-muted">
-            <Loader2 size={24} className="inline animate-spin text-brand mr-2" />
-            Loading attendance roster...
-          </div>
-        )}
-        {!query.isLoading && filteredEmployees.length === 0 && (
-          <div className="p-8 text-center text-muted text-sm">
-            No active employees found matching the filters.
-          </div>
-        )}
-        {filteredEmployees.map((emp) => {
+      {/* Marked / Unmarked Section Filter Tabs */}
+      <div className="flex items-center gap-1.5 p-1 bg-surface border border-subtle rounded-xl shadow-sm overflow-x-auto w-full sm:w-auto">
+        <button
+          onClick={() => setAttendanceSectionFilter('ALL')}
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition ${
+            attendanceSectionFilter === 'ALL'
+              ? 'bg-elevated text-fg shadow-sm border border-subtle'
+              : 'text-fg-2 hover:text-fg hover:bg-hover'
+          }`}
+        >
+          <span>All Staff</span>
+          <span className="px-1.5 py-0.2 rounded-full text-[11px] bg-subtle/50 text-fg-2 font-mono">
+            {stats.totalEmployees}
+          </span>
+        </button>
+
+        <button
+          onClick={() => setAttendanceSectionFilter('UNMARKED')}
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition ${
+            attendanceSectionFilter === 'UNMARKED'
+              ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 shadow-sm border border-amber-500/30 font-bold'
+              : 'text-fg-2 hover:text-fg hover:bg-hover'
+          }`}
+        >
+          <span className="relative flex h-2 w-2">
+            {stats.unmarkedCount > 0 && (
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+            )}
+            <span className={`relative inline-flex rounded-full h-2 w-2 ${stats.unmarkedCount > 0 ? 'bg-amber-500' : 'bg-muted'}`}></span>
+          </span>
+          <span>Unmarked (Pending)</span>
+          <span className={`px-1.5 py-0.2 rounded-full text-[11px] font-mono ${
+            stats.unmarkedCount > 0
+              ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400 font-bold'
+              : 'bg-subtle/50 text-fg-2'
+          }`}>
+            {stats.unmarkedCount}
+          </span>
+        </button>
+
+        <button
+          onClick={() => setAttendanceSectionFilter('MARKED')}
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition ${
+            attendanceSectionFilter === 'MARKED'
+              ? 'bg-success-soft text-success shadow-sm border border-success/30 font-bold'
+              : 'text-fg-2 hover:text-fg hover:bg-hover'
+          }`}
+        >
+          <CheckCircle2 size={13} className="text-success" />
+          <span>Marked Today</span>
+          <span className="px-1.5 py-0.2 rounded-full text-[11px] bg-success-soft text-success font-mono font-bold">
+            {stats.markedCount}
+          </span>
+        </button>
+      </div>
+
+      {/* Helper functions for mobile card and desktop table row */}
+      {(() => {
+        const renderMobileCard = (emp: DailySheetEmployee) => {
           const currentStatus = emp.attendance?.status ?? null;
           const hours = emp.attendance ? emp.attendance.hours : null;
           const isSaving = savingRows[emp.id] || false;
@@ -564,7 +624,7 @@ function DailySheetView() {
                   ) : currentStatus ? (
                     <StatusBadge status={currentStatus} />
                   ) : (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-elevated text-muted border border-dashed border-subtle">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 font-medium">
                       Unmarked
                     </span>
                   )}
@@ -629,195 +689,275 @@ function DailySheetView() {
               </div>
             </div>
           );
-        })}
-      </div>
+        };
 
-      {/* ========================================================================= */}
-      {/* Desktop Roster Table (>= md screens)                                      */}
-      {/* ========================================================================= */}
-      <div className="hidden md:block bg-surface border border-subtle rounded-xl overflow-hidden shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-elevated/60 border-b border-subtle">
-              <tr className="text-fg-2 text-left">
-                <th className="px-4 py-3.5 font-medium">Employee</th>
-                <th className="px-4 py-3.5 font-medium">Category</th>
-                <th className="px-4 py-3.5 font-medium min-w-[340px]">
-                  Attendance Status (Full 8h / Half 4h / Absent 0h)
-                </th>
-                <th className="px-4 py-3.5 font-medium w-28 text-center">Hours</th>
-                <th className="px-4 py-3.5 font-medium text-right pr-6">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-subtle">
+        const renderTableRow = (emp: DailySheetEmployee) => {
+          const currentStatus = emp.attendance?.status ?? null;
+          const hours = emp.attendance ? emp.attendance.hours : null;
+          const isSaving = savingRows[emp.id] || false;
+
+          return (
+            <tr key={emp.id} className="hover:bg-hover transition-colors">
+              {/* Employee Profile */}
+              <td className="px-4 py-3.5">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-elevated border border-subtle flex items-center justify-center font-semibold text-xs text-fg-2 shrink-0">
+                    {emp.firstName.charAt(0)}{emp.lastName.charAt(0)}
+                  </div>
+                  <div>
+                    <div className="font-medium text-fg flex items-center gap-2">
+                      <span>{emp.firstName} {emp.lastName}</span>
+                      {emp.isAssigned ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-medium text-brand bg-brand-soft px-1.5 py-0.5 rounded border border-brand/20">
+                          <Briefcase size={10} /> {emp.assignedClient?.name}
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => setUnassignedPrompt({ employee: emp })}
+                          className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 px-1.5 py-0.5 rounded border border-amber-500/30 transition text-left cursor-pointer"
+                          title="Click to assign to a client"
+                        >
+                          <AlertCircle size={10} /> Assign Client
+                        </button>
+                      )}
+                    </div>
+                    <div className="text-xs font-mono text-muted">{emp.employeeCode}</div>
+                  </div>
+                </div>
+              </td>
+
+              {/* Role / Category */}
+              <td className="px-4 py-3.5 text-xs text-fg-2">
+                <span className="px-2 py-0.5 rounded bg-elevated border border-subtle">
+                  {emp.category.replace('_', ' ')}
+                </span>
+              </td>
+
+              {/* Interactive Status Selector Segmented Buttons */}
+              <td className="px-4 py-3.5">
+                <div className="inline-flex rounded-lg p-1 bg-elevated border border-subtle gap-1">
+                  <button
+                    onClick={() => handleMarkAttendance(emp.id, 'PRESENT', 8)}
+                    disabled={isSaving}
+                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition flex items-center gap-1.5 ${
+                      currentStatus === 'PRESENT'
+                        ? 'bg-success text-white font-semibold shadow-sm'
+                        : 'text-fg-2 hover:text-fg hover:bg-hover'
+                    }`}
+                  >
+                    <CheckCircle2 size={13} /> Full Day (8h)
+                  </button>
+                  <button
+                    onClick={() => handleMarkAttendance(emp.id, 'HALF_DAY', 4)}
+                    disabled={isSaving}
+                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition flex items-center gap-1.5 ${
+                      currentStatus === 'HALF_DAY'
+                        ? 'bg-warning text-white font-semibold shadow-sm'
+                        : 'text-fg-2 hover:text-fg hover:bg-hover'
+                    }`}
+                  >
+                    <Clock size={13} /> Half Day (4h)
+                  </button>
+                  <button
+                    onClick={() => handleMarkAttendance(emp.id, 'ABSENT', 0)}
+                    disabled={isSaving}
+                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition flex items-center gap-1.5 ${
+                      currentStatus === 'ABSENT'
+                        ? 'bg-danger text-white font-semibold shadow-sm'
+                        : 'text-fg-2 hover:text-fg hover:bg-hover'
+                    }`}
+                  >
+                    <UserX size={13} /> Absent (0h)
+                  </button>
+                  <button
+                    onClick={() => handleMarkAttendance(emp.id, 'LEAVE', 8)}
+                    disabled={isSaving}
+                    className={`px-2.5 py-1.5 text-xs font-medium rounded-md transition flex items-center gap-1 ${
+                      currentStatus === 'LEAVE'
+                        ? 'bg-brand text-white font-semibold shadow-sm'
+                        : 'text-fg-2 hover:text-fg hover:bg-hover'
+                    }`}
+                    title="Approved Paid Leave (8h)"
+                  >
+                    Leave (Paid)
+                  </button>
+                </div>
+              </td>
+
+              {/* Hours column */}
+              <td className="px-4 py-3.5 text-center font-mono text-xs">
+                {hours !== null ? (
+                  <span
+                    className={`px-2 py-1 rounded font-semibold ${
+                      hours === 8
+                        ? 'bg-success-soft text-success'
+                        : hours === 4
+                        ? 'bg-warning-soft text-warning'
+                        : hours > 0
+                        ? 'bg-brand-soft text-brand'
+                        : 'text-muted'
+                    }`}
+                  >
+                    {hours.toFixed(1)} hrs
+                  </span>
+                ) : (
+                  <span className="text-muted italic">-</span>
+                )}
+              </td>
+
+              {/* Status Badge */}
+              <td className="px-4 py-3.5 text-right pr-6">
+                {isSaving ? (
+                  <span className="inline-flex items-center text-xs text-muted gap-1">
+                    <Loader2 size={12} className="animate-spin text-brand" /> Saving...
+                  </span>
+                ) : currentStatus ? (
+                  <StatusBadge status={currentStatus} />
+                ) : (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 font-medium">
+                    Unmarked
+                  </span>
+                )}
+              </td>
+            </tr>
+          );
+        };
+
+        return (
+          <>
+            {/* ========================================================================= */}
+            {/* Mobile Responsive Cards (No Horizontal Scrolling, Touch-Friendly Dropdown) */}
+            {/* ========================================================================= */}
+            <div className="block md:hidden bg-surface border border-subtle rounded-xl divide-y divide-subtle shadow-sm overflow-hidden">
               {query.isLoading && (
-                <tr>
-                  <td colSpan={5} className="px-4 py-12 text-center text-muted">
-                    <Loader2 size={24} className="inline animate-spin text-brand mr-2" />
-                    Loading attendance roster...
-                  </td>
-                </tr>
+                <div className="p-8 text-center text-muted">
+                  <Loader2 size={24} className="inline animate-spin text-brand mr-2" />
+                  Loading attendance roster...
+                </div>
               )}
               {!query.isLoading && filteredEmployees.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="px-4 py-12 text-center text-muted">
-                    No active employees found matching the filters.
-                  </td>
-                </tr>
+                <div className="p-8 text-center text-muted text-sm">
+                  No active employees found matching the filters.
+                </div>
               )}
-              {filteredEmployees.map((emp) => {
-                const currentStatus = emp.attendance?.status ?? null;
-                const hours = emp.attendance ? emp.attendance.hours : null;
-                const isSaving = savingRows[emp.id] || false;
 
-                return (
-                  <tr
-                    key={emp.id}
-                    className="hover:bg-hover transition-colors"
-                  >
-                    {/* Employee Profile */}
-                    <td className="px-4 py-3.5">
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-elevated border border-subtle flex items-center justify-center font-semibold text-xs text-fg-2 shrink-0">
-                          {emp.firstName.charAt(0)}
-                          {emp.lastName.charAt(0)}
-                        </div>
-                        <div>
-                          <div className="font-medium text-fg flex items-center gap-2">
-                            <span>
-                              {emp.firstName} {emp.lastName}
-                            </span>
-                            {emp.isAssigned ? (
-                              <span className="inline-flex items-center gap-1 text-[10px] font-medium text-brand bg-brand-soft px-1.5 py-0.5 rounded border border-brand/20">
-                                <Briefcase size={10} /> {emp.assignedClient?.name}
-                              </span>
-                            ) : (
-                              <button
-                                onClick={() => setUnassignedPrompt({ employee: emp })}
-                                className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 px-1.5 py-0.5 rounded border border-amber-500/30 transition text-left cursor-pointer"
-                                title="Click to assign to a client"
-                              >
-                                <AlertCircle size={10} /> Assign Client
-                              </button>
-                            )}
-                          </div>
-                          <div className="text-xs font-mono text-muted">
-                            {emp.employeeCode}
-                          </div>
-                        </div>
+              {/* Section 1: Unmarked Staff (shown if viewing ALL or UNMARKED) */}
+              {(attendanceSectionFilter === 'ALL' || attendanceSectionFilter === 'UNMARKED') &&
+                unmarkedEmployees.length > 0 && (
+                  <div>
+                    {attendanceSectionFilter === 'ALL' && (
+                      <div className="bg-amber-500/10 border-b border-amber-500/20 px-3.5 py-2 flex items-center justify-between text-xs font-bold text-amber-600 dark:text-amber-400">
+                        <span className="flex items-center gap-1.5">
+                          <AlertCircle size={14} /> Unmarked Staff ({unmarkedEmployees.length}) — Pending
+                        </span>
+                        <span className="text-[11px] font-normal text-muted">Tap to mark</span>
                       </div>
-                    </td>
+                    )}
+                    <div className="divide-y divide-subtle">
+                      {unmarkedEmployees.map(renderMobileCard)}
+                    </div>
+                  </div>
+                )}
 
-                    {/* Role / Category */}
-                    <td className="px-4 py-3.5 text-xs text-fg-2">
-                      <span className="px-2 py-0.5 rounded bg-elevated border border-subtle">
-                        {emp.category.replace('_', ' ')}
-                      </span>
-                    </td>
-
-                    {/* Interactive Status Selector Segmented Buttons */}
-                    <td className="px-4 py-3.5">
-                      <div className="inline-flex rounded-lg p-1 bg-elevated border border-subtle gap-1">
-                        {/* Full Day (8h) */}
-                        <button
-                          onClick={() => handleMarkAttendance(emp.id, 'PRESENT', 8)}
-                          disabled={isSaving}
-                          className={`px-3 py-1.5 text-xs font-medium rounded-md transition flex items-center gap-1.5 ${
-                            currentStatus === 'PRESENT'
-                              ? 'bg-success text-white font-semibold shadow-sm'
-                              : 'text-fg-2 hover:text-fg hover:bg-hover'
-                          }`}
-                        >
-                          <CheckCircle2 size={13} />
-                          Full Day (8h)
-                        </button>
-
-                        {/* Half Day (4h) */}
-                        <button
-                          onClick={() => handleMarkAttendance(emp.id, 'HALF_DAY', 4)}
-                          disabled={isSaving}
-                          className={`px-3 py-1.5 text-xs font-medium rounded-md transition flex items-center gap-1.5 ${
-                            currentStatus === 'HALF_DAY'
-                              ? 'bg-warning text-white font-semibold shadow-sm'
-                              : 'text-fg-2 hover:text-fg hover:bg-hover'
-                          }`}
-                        >
-                          <Clock size={13} />
-                          Half Day (4h)
-                        </button>
-
-                        {/* Absent (0h) */}
-                        <button
-                          onClick={() => handleMarkAttendance(emp.id, 'ABSENT', 0)}
-                          disabled={isSaving}
-                          className={`px-3 py-1.5 text-xs font-medium rounded-md transition flex items-center gap-1.5 ${
-                            currentStatus === 'ABSENT'
-                              ? 'bg-danger text-white font-semibold shadow-sm'
-                              : 'text-fg-2 hover:text-fg hover:bg-hover'
-                          }`}
-                        >
-                          <UserX size={13} />
-                          Absent (0h)
-                        </button>
-
-                        {/* Leave */}
-                        <button
-                          onClick={() => handleMarkAttendance(emp.id, 'LEAVE', 8)}
-                          disabled={isSaving}
-                          className={`px-2.5 py-1.5 text-xs font-medium rounded-md transition flex items-center gap-1 ${
-                            currentStatus === 'LEAVE'
-                              ? 'bg-brand text-white font-semibold shadow-sm'
-                              : 'text-fg-2 hover:text-fg hover:bg-hover'
-                          }`}
-                          title="Approved Paid Leave (8h)"
-                        >
-                          Leave (Paid)
-                        </button>
+              {/* Section 2: Marked Staff (shown if viewing ALL or MARKED) */}
+              {(attendanceSectionFilter === 'ALL' || attendanceSectionFilter === 'MARKED') &&
+                markedEmployees.length > 0 && (
+                  <div>
+                    {attendanceSectionFilter === 'ALL' && (
+                      <div className="bg-success-soft/50 border-y border-success/20 px-3.5 py-2 flex items-center justify-between text-xs font-bold text-success">
+                        <span className="flex items-center gap-1.5">
+                          <CheckCircle2 size={14} /> Marked Staff Today ({markedEmployees.length})
+                        </span>
+                        <span className="text-[11px] font-normal text-muted">Completed</span>
                       </div>
-                    </td>
+                    )}
+                    <div className="divide-y divide-subtle">
+                      {markedEmployees.map(renderMobileCard)}
+                    </div>
+                  </div>
+                )}
+            </div>
 
-                    {/* Hours column */}
-                    <td className="px-4 py-3.5 text-center font-mono text-xs">
-                      {hours !== null ? (
-                        <span
-                          className={`px-2 py-1 rounded font-semibold ${
-                            hours === 8
-                              ? 'bg-success-soft text-success'
-                              : hours === 4
-                              ? 'bg-warning-soft text-warning'
-                              : hours > 0
-                              ? 'bg-brand-soft text-brand'
-                              : 'text-muted'
-                          }`}
-                        >
-                          {hours.toFixed(1)} hrs
-                        </span>
-                      ) : (
-                        <span className="text-muted italic">-</span>
-                      )}
-                    </td>
+            {/* ========================================================================= */}
+            {/* Desktop Roster Table (>= md screens)                                      */}
+            {/* ========================================================================= */}
+            <div className="hidden md:block bg-surface border border-subtle rounded-xl overflow-hidden shadow-sm">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-elevated/60 border-b border-subtle">
+                    <tr className="text-fg-2 text-left">
+                      <th className="px-4 py-3.5 font-medium">Employee</th>
+                      <th className="px-4 py-3.5 font-medium">Category</th>
+                      <th className="px-4 py-3.5 font-medium min-w-[340px]">
+                        Attendance Status (Full 8h / Half 4h / Absent 0h)
+                      </th>
+                      <th className="px-4 py-3.5 font-medium w-28 text-center">Hours</th>
+                      <th className="px-4 py-3.5 font-medium text-right pr-6">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-subtle">
+                    {query.isLoading && (
+                      <tr>
+                        <td colSpan={5} className="px-4 py-12 text-center text-muted">
+                          <Loader2 size={24} className="inline animate-spin text-brand mr-2" />
+                          Loading attendance roster...
+                        </td>
+                      </tr>
+                    )}
+                    {!query.isLoading && filteredEmployees.length === 0 && (
+                      <tr>
+                        <td colSpan={5} className="px-4 py-12 text-center text-muted">
+                          No active employees found matching the filters.
+                        </td>
+                      </tr>
+                    )}
 
-                    {/* Status Badge */}
-                    <td className="px-4 py-3.5 text-right pr-6">
-                      {isSaving ? (
-                        <span className="inline-flex items-center text-xs text-muted gap-1">
-                          <Loader2 size={12} className="animate-spin text-brand" /> Saving...
-                        </span>
-                      ) : currentStatus ? (
-                        <StatusBadge status={currentStatus} />
-                      ) : (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-elevated text-muted border border-dashed border-subtle">
-                          Unmarked
-                        </span>
+                    {/* Desktop Section 1: Unmarked Staff */}
+                    {(attendanceSectionFilter === 'ALL' || attendanceSectionFilter === 'UNMARKED') &&
+                      unmarkedEmployees.length > 0 && (
+                        <>
+                          {attendanceSectionFilter === 'ALL' && (
+                            <tr className="bg-amber-500/10 border-b border-amber-500/20">
+                              <td colSpan={5} className="px-4 py-2 text-xs font-bold text-amber-600 dark:text-amber-400">
+                                <div className="flex items-center justify-between">
+                                  <span className="flex items-center gap-1.5">
+                                    <AlertCircle size={14} /> Unmarked Staff ({unmarkedEmployees.length}) — Pending Attendance
+                                  </span>
+                                  <span className="font-normal text-muted text-[11px]">Action required for {selectedDate}</span>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                          {unmarkedEmployees.map(renderTableRow)}
+                        </>
                       )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
+
+                    {/* Desktop Section 2: Marked Staff */}
+                    {(attendanceSectionFilter === 'ALL' || attendanceSectionFilter === 'MARKED') &&
+                      markedEmployees.length > 0 && (
+                        <>
+                          {attendanceSectionFilter === 'ALL' && (
+                            <tr className="bg-success-soft/40 border-y border-success/20">
+                              <td colSpan={5} className="px-4 py-2 text-xs font-bold text-success">
+                                <div className="flex items-center justify-between">
+                                  <span className="flex items-center gap-1.5">
+                                    <CheckCircle2 size={14} /> Marked Staff Today ({markedEmployees.length}) — Attendance Recorded
+                                  </span>
+                                  <span className="font-normal text-muted text-[11px]">Completed</span>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                          {markedEmployees.map(renderTableRow)}
+                        </>
+                      )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
+        );
+      })()}
 
       {/* "Please Assign to a Client" Popup Dialog */}
       <Modal
@@ -913,11 +1053,13 @@ function StatCard({
   value,
   sub,
   color,
+  onClick,
 }: {
   label: string;
   value: number | string;
   sub?: string;
   color: 'success' | 'warning' | 'danger' | 'brand' | 'neutral';
+  onClick?: () => void;
 }) {
   const borderMap = {
     success: 'border-success/30 bg-success-soft/20 text-success',
@@ -929,7 +1071,10 @@ function StatCard({
 
   return (
     <div
-      className={`p-3.5 rounded-xl border transition-all ${borderMap[color]}`}
+      onClick={onClick}
+      className={`p-3.5 rounded-xl border transition-all ${borderMap[color]} ${
+        onClick ? 'cursor-pointer hover:border-brand/60 active:scale-[0.98]' : ''
+      }`}
     >
       <div className="text-xs text-fg-2 font-medium">{label}</div>
       <div className="text-xl font-bold mt-1 flex items-baseline gap-1.5">
