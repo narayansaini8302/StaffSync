@@ -7,6 +7,7 @@ import {
   Calendar,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Pencil,
   Trash2,
   CheckCircle2,
@@ -513,8 +514,128 @@ function DailySheetView() {
         </div>
       </div>
 
-      {/* Interactive Daily Attendance Roster Table */}
-      <div className="bg-surface border border-subtle rounded-xl overflow-hidden shadow-sm">
+      {/* ========================================================================= */}
+      {/* Mobile Responsive Cards (No Horizontal Scrolling, Touch-Friendly Dropdown) */}
+      {/* ========================================================================= */}
+      <div className="block md:hidden bg-surface border border-subtle rounded-xl divide-y divide-subtle shadow-sm overflow-hidden">
+        {query.isLoading && (
+          <div className="p-8 text-center text-muted">
+            <Loader2 size={24} className="inline animate-spin text-brand mr-2" />
+            Loading attendance roster...
+          </div>
+        )}
+        {!query.isLoading && filteredEmployees.length === 0 && (
+          <div className="p-8 text-center text-muted text-sm">
+            No active employees found matching the filters.
+          </div>
+        )}
+        {filteredEmployees.map((emp) => {
+          const currentStatus = emp.attendance?.status ?? null;
+          const hours = emp.attendance ? emp.attendance.hours : null;
+          const isSaving = savingRows[emp.id] || false;
+
+          return (
+            <div key={emp.id} className="p-3.5 space-y-3 hover:bg-hover/40 transition-colors">
+              {/* Top row: Employee details & Status badge */}
+              <div className="flex items-start justify-between gap-2.5">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-10 h-10 rounded-full bg-elevated border border-subtle flex items-center justify-center font-semibold text-xs text-fg-2 shrink-0">
+                    {emp.firstName.charAt(0)}{emp.lastName.charAt(0)}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="font-semibold text-sm text-fg truncate">
+                      {emp.firstName} {emp.lastName}
+                    </div>
+                    <div className="flex items-center gap-1.5 text-xs text-muted flex-wrap">
+                      <span className="font-mono text-fg-2">{emp.employeeCode}</span>
+                      <span>•</span>
+                      <span className="px-1.5 py-0.5 rounded bg-elevated border border-subtle text-[11px] text-fg-2">
+                        {emp.category.replace('_', ' ')}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="text-right shrink-0 flex flex-col items-end gap-1">
+                  {isSaving ? (
+                    <span className="inline-flex items-center text-xs text-muted gap-1">
+                      <Loader2 size={12} className="animate-spin text-brand" /> Saving...
+                    </span>
+                  ) : currentStatus ? (
+                    <StatusBadge status={currentStatus} />
+                  ) : (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-elevated text-muted border border-dashed border-subtle">
+                      Unmarked
+                    </span>
+                  )}
+                  {hours !== null && (
+                    <span className="text-xs font-mono text-fg-2 font-medium">
+                      {hours.toFixed(1)} hrs
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Client badge or Assign Client button */}
+              {emp.isAssigned ? (
+                <div className="flex items-center gap-1 text-[11px] font-medium text-brand bg-brand-soft px-2 py-1 rounded-md border border-brand/20 w-fit">
+                  <Briefcase size={12} /> {emp.assignedClient?.name}
+                </div>
+              ) : (
+                <button
+                  onClick={() => setUnassignedPrompt({ employee: emp })}
+                  className="w-full flex items-center justify-center gap-1.5 text-xs font-semibold text-amber-600 dark:text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 p-2 rounded-lg border border-amber-500/30 transition text-center"
+                >
+                  <AlertCircle size={13} /> Click to assign client before marking
+                </button>
+              )}
+
+              {/* Mobile Attendance Dropdown Menu */}
+              <div className="pt-0.5">
+                <div className="relative">
+                  <select
+                    value={currentStatus || ''}
+                    onChange={(e) => {
+                      const val = e.target.value as 'PRESENT' | 'HALF_DAY' | 'ABSENT' | 'LEAVE';
+                      if (!val) return;
+                      const targetHours = val === 'PRESENT' || val === 'LEAVE' ? 8 : val === 'HALF_DAY' ? 4 : 0;
+                      handleMarkAttendance(emp.id, val, targetHours);
+                    }}
+                    disabled={isSaving}
+                    className={`w-full py-2.5 pl-3.5 pr-10 text-xs sm:text-sm font-semibold rounded-lg border appearance-none transition cursor-pointer shadow-sm focus:outline-none focus:ring-2 focus:ring-brand/40 ${
+                      currentStatus === 'PRESENT'
+                        ? 'bg-success-soft text-success border-success/40'
+                        : currentStatus === 'HALF_DAY'
+                        ? 'bg-warning-soft text-warning border-warning/40'
+                        : currentStatus === 'ABSENT'
+                        ? 'bg-danger-soft text-danger border-danger/40'
+                        : currentStatus === 'LEAVE'
+                        ? 'bg-brand-soft text-brand border-brand/40'
+                        : 'bg-elevated text-fg border-subtle hover:bg-hover'
+                    }`}
+                  >
+                    <option value="" disabled>
+                      Select Attendance (Present, Absent, Leave)...
+                    </option>
+                    <option value="PRESENT">✓ Present — Full Day (8h)</option>
+                    <option value="HALF_DAY">◷ Half Day (4h)</option>
+                    <option value="ABSENT">✕ Absent (0h — Deduct)</option>
+                    <option value="LEAVE">★ Leave (Paid 8h — No Deduct)</option>
+                  </select>
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-fg-2">
+                    <ChevronDown size={16} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* ========================================================================= */}
+      {/* Desktop Roster Table (>= md screens)                                      */}
+      {/* ========================================================================= */}
+      <div className="hidden md:block bg-surface border border-subtle rounded-xl overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-elevated/60 border-b border-subtle">
@@ -680,7 +801,7 @@ function DailySheetView() {
                     <td className="px-4 py-3.5 text-right pr-6">
                       {isSaving ? (
                         <span className="inline-flex items-center text-xs text-muted gap-1">
-                          <Loader2 size={12} className="animate-spin" /> Saving...
+                          <Loader2 size={12} className="animate-spin text-brand" /> Saving...
                         </span>
                       ) : currentStatus ? (
                         <StatusBadge status={currentStatus} />

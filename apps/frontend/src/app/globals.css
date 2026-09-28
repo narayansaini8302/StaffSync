@@ -52,40 +52,45 @@
 }
 
 .dark {
-  /* Backgrounds */
-  --bg-app:        #0A1628;
-  --bg-surface:    #0F1F35;
-  --bg-elevated:   #1A2B45;
-  --bg-hover:      #1A2B45;
+  /* Backgrounds: Neutral dark charcoal / slate gray */
+  --bg-app:        #111216;
+  --bg-surface:    #18191f;
+  --bg-elevated:   #23242b;
+  --bg-hover:      #2b2d36;
 
-  /* Text */
-  --fg-primary:    #E3F2FD;
-  --fg-secondary:  #90CAF9;
-  --fg-muted:      #5B7290;
+  /* Text: Clean neutral grays */
+  --fg-primary:    #f3f4f6;
+  --fg-secondary:  #a1a1aa;
+  --fg-muted:      #71717a;
 
-  /* Borders */
-  --border-subtle: #1A2B45;
-  --border-strong: #2A3F5C;
+  /* Borders: Subtle gray borders */
+  --border-subtle: #272832;
+  --border-strong: #3b3d4a;
 
   /* Brand */
-  --brand:         #2196F3;
-  --brand-hover:   #42A5F5;
-  --brand-soft:    #0D47A1;
-  --brand-fg:      #FFFFFF;
+  --brand:         #3b82f6;
+  --brand-hover:   #60a5fa;
+  --brand-soft:    rgba(59, 130, 246, 0.16);
+  --brand-fg:      #ffffff;
 
   /* Semantic */
-  --success:       #22C55E;
-  --success-soft:  #052E16;
-  --danger:        #EF4444;
-  --danger-soft:   #450A0A;
-  --warning:       #F97316;
-  --warning-soft:  #431407;
+  --success:       #22c55e;
+  --success-soft:  rgba(34, 197, 94, 0.16);
+  --danger:        #ef4444;
+  --danger-soft:   rgba(239, 68, 68, 0.16);
+  --warning:       #f97316;
+  --warning-soft:  rgba(249, 115, 22, 0.16);
 
   /* Legacy compatibility */
   --background: var(--bg-app);
   --foreground: var(--fg-primary);
 
   color-scheme: dark;
+}
+
+select option {
+  background-color: var(--bg-surface);
+  color: var(--fg-primary);
 }
 
 /* Bridge to Tailwind v4 tokens (matches the original file's @theme) */
