@@ -18,10 +18,8 @@ async function main() {
   logger.info('✅ PostgreSQL connected');
 
   try {
-    await prisma.$executeRawUnsafe(`
-      ALTER TABLE "employees" ADD COLUMN IF NOT EXISTS "pfRate" numeric(5,2);
-      ALTER TABLE "employees" ADD COLUMN IF NOT EXISTS "esiRate" numeric(5,2);
-    `);
+    await prisma.$executeRawUnsafe('ALTER TABLE "employees" ADD COLUMN IF NOT EXISTS "pfRate" numeric(5,2);');
+    await prisma.$executeRawUnsafe('ALTER TABLE "employees" ADD COLUMN IF NOT EXISTS "esiRate" numeric(5,2);');
   } catch (err) {
     logger.warn('Could not auto-add pfRate/esiRate columns:', err);
   }

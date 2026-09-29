@@ -137,73 +137,59 @@ export async function deleteCompany(id: string) {
   const company = await prisma.company.findUnique({ where: { id } });
   if (!company) throw new Error('COMPANY_NOT_FOUND');
 
-  return prisma.$transaction(async (tx) => {
-    // 1. Delete invoice payments for this company
-    await tx.invoicePayment.deleteMany({ where: { companyId: id } });
+  return prisma.$transaction(
+    async (tx) => {
+      // 1. Delete invoice payments for this company
+      await tx.$executeRaw`DELETE FROM "invoice_payments" WHERE "companyId" = ${id};`;
 
-    // 2. Delete invoice line items
-    await tx.taxInvoiceLineItem.deleteMany({
-      where: { invoice: { companyId: id } },
-    });
+      // 2. Delete invoice line items
+      await tx.$executeRaw`DELETE FROM "tax_invoice_line_items" WHERE "invoiceId" IN (SELECT "id" FROM "tax_invoices" WHERE "companyId" = ${id});`;
 
-    // 3. Delete tax invoices
-    await tx.taxInvoice.deleteMany({ where: { companyId: id } });
+      // 3. Delete tax invoices
+      await tx.$executeRaw`DELETE FROM "tax_invoices" WHERE "companyId" = ${id};`;
 
-    // 4. Delete client category rates
-    await tx.clientCategoryRate.deleteMany({
-      where: { client: { companyId: id } },
-    });
+      // 4. Delete client category rates
+      await tx.$executeRaw`DELETE FROM "client_category_rates" WHERE "clientId" IN (SELECT "id" FROM "clients" WHERE "companyId" = ${id});`;
 
-    // 5. Delete employee assignments
-    await tx.employeeAssignment.deleteMany({
-      where: { client: { companyId: id } },
-    });
+      // 5. Delete employee assignments
+      await tx.$executeRaw`DELETE FROM "employee_assignments" WHERE "clientId" IN (SELECT "id" FROM "clients" WHERE "companyId" = ${id}) OR "employeeId" IN (SELECT "id" FROM "employees" WHERE "companyId" = ${id});`;
 
-    // 6. Delete clients
-    await tx.client.deleteMany({ where: { companyId: id } });
+      // 6. Delete clients
+      await tx.$executeRaw`DELETE FROM "clients" WHERE "companyId" = ${id};`;
 
-    // 7. Delete payslip line items
-    await tx.payslipLineItem.deleteMany({
-      where: { payslip: { payrollRun: { companyId: id } } },
-    });
+      // 7. Delete payslip line items
+      await tx.$executeRaw`DELETE FROM "payslip_line_items" WHERE "payslipId" IN (SELECT p."id" FROM "payslips" p JOIN "payroll_runs" r ON p."payrollRunId" = r."id" WHERE r."companyId" = ${id});`;
 
-    // 8. Delete payslips
-    await tx.payslip.deleteMany({
-      where: { payrollRun: { companyId: id } },
-    });
+      // 8. Delete payslips
+      await tx.$executeRaw`DELETE FROM "payslips" WHERE "payrollRunId" IN (SELECT "id" FROM "payroll_runs" WHERE "companyId" = ${id});`;
 
-    // 9. Delete payroll runs
-    await tx.payrollRun.deleteMany({ where: { companyId: id } });
+      // 9. Delete payroll runs
+      await tx.$executeRaw`DELETE FROM "payroll_runs" WHERE "companyId" = ${id};`;
 
-    // 10. Delete attendance logs
-    await tx.attendanceLog.deleteMany({ where: { companyId: id } });
+      // 10. Delete attendance logs
+      await tx.$executeRaw`DELETE FROM "attendance_logs" WHERE "companyId" = ${id};`;
 
-    // 11. Delete attendance days
-    await tx.attendanceDay.deleteMany({ where: { companyId: id } });
+      // 11. Delete attendance days
+      await tx.$executeRaw`DELETE FROM "attendance_days" WHERE "companyId" = ${id};`;
 
-    // 12. Delete biometrics & face embeddings
-    await tx.biometric.deleteMany({
-      where: { employee: { companyId: id } },
-    });
-    await tx.faceEmbedding.deleteMany({
-      where: { employee: { companyId: id } },
-    });
+      // 12. Delete biometrics & face embeddings
+      await tx.$executeRaw`DELETE FROM "biometrics" WHERE "employeeId" IN (SELECT "id" FROM "employees" WHERE "companyId" = ${id});`;
+      await tx.$executeRaw`DELETE FROM "face_embeddings" WHERE "employeeId" IN (SELECT "id" FROM "employees" WHERE "companyId" = ${id});`;
 
-    // 13. Disconnect user from employee before deleting users
-    await tx.employee.updateMany({
-      where: { companyId: id },
-      data: { userId: null },
-    });
+      // 13. Disconnect user from employee before deleting users
+      await tx.$executeRaw`UPDATE "employees" SET "userId" = NULL WHERE "companyId" = ${id};`;
 
-    // 14. Delete employees
-    await tx.employee.deleteMany({ where: { companyId: id } });
+      // 14. Delete employees
+      await tx.$executeRaw`DELETE FROM "employees" WHERE "companyId" = ${id};`;
 
-    // 15. Delete users
-    await tx.user.deleteMany({ where: { companyId: id } });
+      // 15. Delete users
+      await tx.$executeRaw`DELETE FROM "users" WHERE "companyId" = ${id};`;
 
-    // 16. Finally delete company record
-    return tx.company.delete({ where: { id } });
-  });
+      // 16. Finally delete company record
+      return tx.company.delete({ where: { id } });
+    },
+    { maxWait: 20000, timeout: 60000 },
+  );
 }
 
 // ===========================================================================
