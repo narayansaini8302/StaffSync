@@ -19,7 +19,6 @@ export function LogEditor({
   onSaved: () => void;
 }) {
   const [timestamp, setTimestamp] = useState('');
-  const [direction, setDirection] = useState<'IN' | 'OUT'>('IN');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastLog, setLastLog] = useState<AttendanceLog | null>(null);
@@ -28,7 +27,6 @@ export function LogEditor({
     setLastLog(log);
     if (log) {
       setTimestamp(toLocalInput(log.timestamp));
-      setDirection(log.direction);
       setError(null);
     }
   }
@@ -40,7 +38,6 @@ export function LogEditor({
     try {
       await api.patch(`/api/attendance/logs/${log.id}`, {
         timestamp: new Date(timestamp).toISOString(),
-        direction,
       });
       onSaved();
     } catch (e: any) {
@@ -83,18 +80,6 @@ export function LogEditor({
               onChange={(e) => setTimestamp(e.target.value)}
               className="w-full px-3 py-2 rounded-lg bg-app border border-subtle text-fg text-sm focus:outline-none focus:border-brand"
             />
-          </div>
-
-          <div>
-            <label className="block text-xs text-fg-2 mb-1">Direction</label>
-            <select
-              value={direction}
-              onChange={(e) => setDirection(e.target.value as 'IN' | 'OUT')}
-              className="w-full px-3 py-2 rounded-lg bg-app border border-subtle text-fg text-sm focus:outline-none focus:border-brand"
-            >
-              <option value="IN">IN</option>
-              <option value="OUT">OUT</option>
-            </select>
           </div>
 
           {error && (

@@ -1191,25 +1191,11 @@ function DailyView() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-2 text-xs pt-1 border-t border-subtle/40">
-                  <div>
-                    <span className="text-[10px] text-muted uppercase font-semibold block">In</span>
-                    <span className="font-mono text-fg font-medium">
-                      {d.firstIn ? new Date(d.firstIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-muted uppercase font-semibold block">Out</span>
-                    <span className="font-mono text-fg font-medium">
-                      {d.lastOut ? new Date(d.lastOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
-                    </span>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-[10px] text-muted uppercase font-semibold block">Total</span>
-                    <span className="font-medium text-brand font-mono">
-                      {formatMinutes(d.totalMinutes)}
-                    </span>
-                  </div>
+                <div className="flex items-center justify-between text-xs pt-1 border-t border-subtle/40">
+                  <span className="text-[11px] text-muted font-medium">Working Hours</span>
+                  <span className="font-medium text-brand font-mono">
+                    {formatMinutes(d.totalMinutes)}
+                  </span>
                 </div>
               </div>
             );
@@ -1223,8 +1209,6 @@ function DailyView() {
             <tr className="text-fg-2 text-left">
               <th className="px-4 py-3 font-medium">Date</th>
               <th className="px-4 py-3 font-medium">Employee</th>
-              <th className="px-4 py-3 font-medium">First In</th>
-              <th className="px-4 py-3 font-medium">Last Out</th>
               <th className="px-4 py-3 font-medium">Total Hours</th>
               <th className="px-4 py-3 font-medium">Status</th>
             </tr>
@@ -1232,14 +1216,14 @@ function DailyView() {
           <tbody>
             {query.isLoading && (
               <tr>
-                <td colSpan={6} className="px-4 py-10 text-center text-muted">
+                <td colSpan={4} className="px-4 py-10 text-center text-muted">
                   <Loader2 size={20} className="inline animate-spin" /> Loading...
                 </td>
               </tr>
             )}
             {!query.isLoading && query.data?.data.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-10 text-center text-muted">
+                <td colSpan={4} className="px-4 py-10 text-center text-muted">
                   No attendance records in this range
                 </td>
               </tr>
@@ -1263,22 +1247,6 @@ function DailyView() {
                         {emp.employeeCode}
                       </span>
                     )}
-                  </td>
-                  <td className="px-4 py-3 font-mono text-xs text-fg-2">
-                    {d.firstIn
-                      ? new Date(d.firstIn).toLocaleTimeString([], {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })
-                      : '-'}
-                  </td>
-                  <td className="px-4 py-3 font-mono text-xs text-fg-2">
-                    {d.lastOut
-                      ? new Date(d.lastOut).toLocaleTimeString([], {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })
-                      : '-'}
                   </td>
                   <td className="px-4 py-3 text-fg font-medium">
                     {formatMinutes(d.totalMinutes)}
@@ -1426,17 +1394,6 @@ function LogsView() {
                     )}
                   </div>
                 </div>
-                <div>
-                  <span
-                    className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border ${
-                      log.direction === 'IN'
-                        ? 'bg-success-soft text-success border-success/30'
-                        : 'bg-warning-soft text-warning border-warning/30'
-                    }`}
-                  >
-                    {log.direction}
-                  </span>
-                </div>
               </div>
 
               {/* Source & Notes */}
@@ -1480,7 +1437,6 @@ function LogsView() {
             <tr className="text-fg-2 text-left">
               <th className="px-4 py-3 font-medium">Time</th>
               <th className="px-4 py-3 font-medium">Employee</th>
-              <th className="px-4 py-3 font-medium">Direction</th>
               <th className="px-4 py-3 font-medium">Source</th>
               <th className="px-4 py-3 font-medium">Notes</th>
               <th className="px-4 py-3 font-medium text-right">Actions</th>
@@ -1489,14 +1445,14 @@ function LogsView() {
           <tbody>
             {query.isLoading && (
               <tr>
-                <td colSpan={6} className="px-4 py-10 text-center text-muted">
+                <td colSpan={5} className="px-4 py-10 text-center text-muted">
                   <Loader2 size={20} className="inline animate-spin" /> Loading...
                 </td>
               </tr>
             )}
             {!query.isLoading && query.data?.data.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-10 text-center text-muted">
+                <td colSpan={5} className="px-4 py-10 text-center text-muted">
                   No logs in this range
                 </td>
               </tr>
@@ -1518,17 +1474,6 @@ function LogsView() {
                       {log.employee.employeeCode}
                     </span>
                   )}
-                </td>
-                <td className="px-4 py-3">
-                  <span
-                    className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs border ${
-                      log.direction === 'IN'
-                        ? 'bg-success-soft text-success border-success/30'
-                        : 'bg-warning-soft text-warning border-warning/30'
-                    }`}
-                  >
-                    {log.direction}
-                  </span>
                 </td>
                 <td className="px-4 py-3 text-fg-2 text-xs font-mono">{log.source}</td>
                 <td className="px-4 py-3 text-fg-2 text-xs">

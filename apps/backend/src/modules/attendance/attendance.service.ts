@@ -1,6 +1,6 @@
 import { prisma } from '../../config/prisma';
 import { attendanceConfig } from '../../config/attendance';
-import { LogDirection, LogSource, Prisma } from '@prisma/client';
+import { LogSource, Prisma } from '@prisma/client';
 
 export interface RecordScanInput {
   employeeId: string;
@@ -9,7 +9,6 @@ export interface RecordScanInput {
   deviceId?: string;
   confidence?: number;
   scanId?: string;
-  direction?: 'IN' | 'OUT';
   notes?: string;
 }
 
@@ -17,7 +16,6 @@ export interface ListLogsQuery {
   employeeId?: string;
   from?: string;
   to?: string;
-  direction?: 'IN' | 'OUT';
   source?: LogSource;
   page?: number;
   pageSize?: number;
@@ -68,7 +66,6 @@ export async function recordScan(companyId: string, input: RecordScanInput) {
   }
 
   const timestamp = input.timestamp ? new Date(input.timestamp) : new Date();
-  const dayStart = startOfDay(timestamp);
 
   // Debounce: ignore scans within 30s of the last one for this employee
   if (!input.scanId) {
@@ -90,24 +87,11 @@ export async function recordScan(companyId: string, input: RecordScanInput) {
     }
   }
 
-  const lastLog = await prisma.attendanceLog.findFirst({
-    where: {
-      employeeId: input.employeeId,
-      companyId,
-      timestamp: { gte: dayStart, lt: addDays(dayStart, 1) },
-    },
-    orderBy: { timestamp: 'desc' },
-  });
-
-  const direction: LogDirection =
-    input.direction ?? (lastLog?.direction === 'IN' ? 'OUT' : 'IN');
-
   const log = await prisma.attendanceLog.create({
     data: {
       employeeId: input.employeeId,
       companyId,
       timestamp,
-      direction,
       source: input.source as LogSource,
       deviceId: input.deviceId,
       confidence: input.confidence,
@@ -144,7 +128,7 @@ export async function recomputeDay(
   if (logs.length === 0) {
     return prisma.attendanceDay.upsert({
       where: { employeeId_date: { employeeId, date: dayStart } },
-      create: { employeeId, companyId, date: dayStart, status: 'ABSENT' },
+      create: { employeeId, companyId, date: dayStart, status: 'ABSENT', totalMinutes: 0 },
       update: {
         status: 'ABSENT',
         firstIn: null,
@@ -156,35 +140,9 @@ export async function recomputeDay(
     });
   }
 
-  const firstIn = logs.find((l) => l.direction === 'IN')?.timestamp ?? null;
-  const lastOut = [...logs].reverse().find((l) => l.direction === 'OUT')?.timestamp ?? null;
-
-  let rawMinutes = 0;
-  let openIn: Date | null = null;
-  for (const log of logs) {
-    if (log.direction === 'IN') {
-      openIn = log.timestamp;
-    } else if (log.direction === 'OUT' && openIn) {
-      rawMinutes += Math.round(
-        (log.timestamp.getTime() - openIn.getTime()) / 60000,
-      );
-      openIn = null;
-    }
-  }
-
-  // Round to nearest hour (30+ min → up)
-  const roundedHours = Math.round(rawMinutes / 60);
-  const totalMinutes = roundedHours * 60;
-  const overtimeMins = 0;   // No overtime tracking
-  const lateMins = 0;       // No late tracking
-  let status = 'ABSENT';
-  if (roundedHours >= 6) {
-    status = 'PRESENT';
-  } else if (roundedHours >= 3) {
-    status = 'HALF_DAY';
-  } else {
-    status = 'ABSENT';
-  }
+  // Any attendance log on this day marks the employee as PRESENT (Full Day: 8 hours = 480 mins)
+  const totalMinutes = 480;
+  const status = 'PRESENT';
 
   return prisma.attendanceDay.upsert({
     where: { employeeId_date: { employeeId, date: dayStart } },
@@ -192,19 +150,19 @@ export async function recomputeDay(
       employeeId,
       companyId,
       date: dayStart,
-      firstIn,
-      lastOut,
+      firstIn: null,
+      lastOut: null,
       totalMinutes,
-      overtimeMins,
-      lateMins,
+      overtimeMins: 0,
+      lateMins: 0,
       status,
     },
     update: {
-      firstIn,
-      lastOut,
+      firstIn: null,
+      lastOut: null,
       totalMinutes,
-      overtimeMins,
-      lateMins,
+      overtimeMins: 0,
+      lateMins: 0,
       status,
     },
   });
@@ -231,7 +189,6 @@ export async function listLogs(companyId: string, query: ListLogsQuery) {
 
   const where: Prisma.AttendanceLogWhereInput = { companyId };
   if (query.employeeId) where.employeeId = query.employeeId;
-  if (query.direction) where.direction = query.direction;
   if (query.source) where.source = query.source;
   if (query.from || query.to) {
     where.timestamp = {};
@@ -340,13 +297,6 @@ export async function markManualAttendance(
     totalMinutes = 0;
   }
 
-  let firstIn: Date | null = null;
-  let lastOut: Date | null = null;
-  if (input.status === 'PRESENT' || input.status === 'HALF_DAY' || input.status === 'LEAVE') {
-    firstIn = new Date(dayDate.getTime() + 9 * 3600000); // 09:00 UTC
-    lastOut = new Date(firstIn.getTime() + totalMinutes * 60000);
-  }
-
   const day = await prisma.attendanceDay.upsert({
     where: {
       employeeId_date: {
@@ -362,14 +312,14 @@ export async function markManualAttendance(
       totalMinutes,
       overtimeMins: 0,
       lateMins: 0,
-      firstIn,
-      lastOut,
+      firstIn: null,
+      lastOut: null,
     },
     update: {
       status: input.status,
       totalMinutes,
-      firstIn,
-      lastOut,
+      firstIn: null,
+      lastOut: null,
     },
   });
 
@@ -379,7 +329,6 @@ export async function markManualAttendance(
       employeeId: input.employeeId,
       companyId,
       timestamp: new Date(),
-      direction: input.status === 'ABSENT' ? 'OUT' : 'IN',
       source: 'MANUAL',
       notes:
         input.notes ||
@@ -541,8 +490,6 @@ export async function getDailySheet(companyId: string, dateStr: string) {
             status: record.status,
             totalMinutes: record.totalMinutes,
             hours: Math.round((record.totalMinutes / 60) * 10) / 10,
-            firstIn: record.firstIn,
-            lastOut: record.lastOut,
             updatedAt: record.updatedAt,
           }
         : null,
@@ -584,7 +531,7 @@ export async function deleteLog(companyId: string, id: string) {
 export async function editLog(
   companyId: string,
   id: string,
-  patch: { timestamp?: string; direction?: 'IN' | 'OUT' },
+  patch: { timestamp?: string },
 ) {
   const log = await prisma.attendanceLog.findFirst({ where: { id, companyId } });
   if (!log) throw new Error('LOG_NOT_FOUND');
@@ -593,7 +540,6 @@ export async function editLog(
     where: { id },
     data: {
       ...(patch.timestamp ? { timestamp: new Date(patch.timestamp) } : {}),
-      ...(patch.direction ? { direction: patch.direction } : {}),
     },
   });
 

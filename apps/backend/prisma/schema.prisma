@@ -206,8 +206,8 @@ model AttendanceLog {
   employeeId String
   employee   Employee     @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   companyId  String
-  timestamp  DateTime     @default(now())
-  direction  LogDirection
+  timestamp  DateTime      @default(now())
+  direction  LogDirection?
   source     LogSource
   deviceId   String?
   confidence Float?

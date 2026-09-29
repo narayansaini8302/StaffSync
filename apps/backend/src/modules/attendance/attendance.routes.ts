@@ -26,7 +26,6 @@ const scanSchema = z.object({
   deviceId: z.string().optional(),
   confidence: z.number().min(0).max(1).optional(),
   scanId: z.string().min(1).optional(),
-  direction: z.enum(['IN', 'OUT']).optional(),
   notes: z.string().optional(),
 });
 
@@ -69,7 +68,6 @@ attendanceRouter.get('/logs', requireAuth, async (req, res) => {
     employeeId: req.query.employeeId as string | undefined,
     from: req.query.from as string | undefined,
     to: req.query.to as string | undefined,
-    direction: req.query.direction as 'IN' | 'OUT' | undefined,
     source: req.query.source as any,
     page: req.query.page ? Number(req.query.page) : undefined,
     pageSize: req.query.pageSize ? Number(req.query.pageSize) : undefined,
@@ -228,17 +226,13 @@ attendanceRouter.patch(
   requireAuth,
   requireRole('ADMIN'),
   async (req, res) => {
-    const { timestamp, direction } = req.body ?? {};
+    const { timestamp } = req.body ?? {};
     if (timestamp && typeof timestamp !== 'string') {
       return res.status(400).json({ error: 'timestamp must be ISO string' });
-    }
-    if (direction && direction !== 'IN' && direction !== 'OUT') {
-      return res.status(400).json({ error: 'direction must be IN or OUT' });
     }
     try {
       const result = await editLog(req.user!.companyId, String(req.params.id) as string, {
         timestamp,
-        direction,
       });
       res.json(result);
     } catch (e: any) {

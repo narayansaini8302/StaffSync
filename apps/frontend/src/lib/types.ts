@@ -88,7 +88,7 @@ export interface AttendanceLog {
   id: string;
   employeeId: string;
   timestamp: string;
-  direction: LogDirection;
+  direction?: LogDirection | null;
   source: LogSource;
   deviceId?: string | null;
   confidence?: number | null;

@@ -20,8 +20,9 @@ async function main() {
   try {
     await prisma.$executeRawUnsafe('ALTER TABLE "employees" ADD COLUMN IF NOT EXISTS "pfRate" numeric(5,2);');
     await prisma.$executeRawUnsafe('ALTER TABLE "employees" ADD COLUMN IF NOT EXISTS "esiRate" numeric(5,2);');
+    await prisma.$executeRawUnsafe('ALTER TABLE "attendance_logs" ALTER COLUMN "direction" DROP NOT NULL;');
   } catch (err) {
-    logger.warn('Could not auto-add pfRate/esiRate columns:', err);
+    logger.warn('Could not run schema alterations on startup:', err);
   }
 
   const server = app.listen(env.PORT, '0.0.0.0', () => {

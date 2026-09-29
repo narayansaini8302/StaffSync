@@ -102,10 +102,9 @@ async function scanOnce() {
     const data = await res.json();
 
     if (data.matched) {
-      const dir = data.log?.direction || '?';
       const emp = data.log?.employeeId?.slice(0, 8) || '?';
       const conf = ((data.confidence || 0) * 100).toFixed(1);
-      log(`? ${dir} · emp=${emp}… · conf=${conf}% · day=${data.day?.totalMinutes ?? 0}m`, 'ok');
+      log(`âœ“ emp=${emp} â€¢ conf=${conf}% â€¢ status=${data.day?.status ?? 'PRESENT'}`, 'ok');
     } else if (data.error) {
       log('? ' + data.error, 'err');
     } else if (res.status === 422) {
