@@ -24,6 +24,8 @@ export interface Employee {
   customCategory?: string | null;
   pfApplicable?: boolean;
   esiApplicable?: boolean;
+  pfRate?: number | string | null;
+  esiRate?: number | string | null;
   department?: string | null;
   designation?: string | null;
   employmentType: EmploymentType;
@@ -61,6 +63,8 @@ export interface CreateEmployeeInput {
   customCategory?: string;
   pfApplicable?: boolean;
   esiApplicable?: boolean;
+  pfRate?: number | null;
+  esiRate?: number | null;
   department?: string;
   designation?: string;
   employmentType?: EmploymentType;

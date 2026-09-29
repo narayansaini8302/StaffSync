@@ -114,6 +114,8 @@ model Employee {
   customCategory String?
   pfApplicable   Boolean          @default(true)
   esiApplicable  Boolean          @default(true)
+  pfRate         Decimal?         @db.Decimal(5, 2)
+  esiRate        Decimal?         @db.Decimal(5, 2)
   department     String?
   designation    String?
   employmentType EmploymentType   @default(FULL_TIME)

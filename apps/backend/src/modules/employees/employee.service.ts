@@ -29,6 +29,8 @@ export interface CreateEmployeeInput {
   customCategory?: string;
   pfApplicable?: boolean;
   esiApplicable?: boolean;
+  pfRate?: number | null;
+  esiRate?: number | null;
   department?: string;
   designation?: string;
   employmentType?: 'FULL_TIME' | 'PART_TIME' | 'CONTRACT' | 'INTERN';
@@ -81,6 +83,8 @@ export async function createEmployee(companyId: string, input: CreateEmployeeInp
       customCategory: input.category === 'CUSTOM' ? (input.customCategory?.trim() ?? null) : null,
       pfApplicable: input.pfApplicable ?? true,
       esiApplicable: input.esiApplicable ?? true,
+      pfRate: input.pfRate !== undefined ? input.pfRate : 12,
+      esiRate: input.esiRate !== undefined ? input.esiRate : 3.75,
       department: input.department?.trim() || null,
       designation: input.designation?.trim() || null,
       employmentType: input.employmentType ?? 'FULL_TIME',
@@ -227,6 +231,8 @@ export async function updateEmployee(
   if (input.customCategory !== undefined) data.customCategory = input.customCategory;
   if (input.pfApplicable !== undefined) data.pfApplicable = input.pfApplicable;
   if (input.esiApplicable !== undefined) data.esiApplicable = input.esiApplicable;
+  if (input.pfRate !== undefined) data.pfRate = input.pfRate;
+  if (input.esiRate !== undefined) data.esiRate = input.esiRate;
   if (input.department !== undefined) data.department = input.department;
   if (input.designation !== undefined) data.designation = input.designation;
   if (input.employmentType !== undefined) data.employmentType = input.employmentType;

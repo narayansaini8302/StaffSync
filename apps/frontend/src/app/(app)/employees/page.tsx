@@ -232,10 +232,14 @@ export default function EmployeesPage() {
                 )}
 
                 {emp.pfApplicable !== false && (
-                  <span className="text-[9px] px-1.5 py-0.2 rounded bg-brand/10 text-brand font-semibold">PF</span>
+                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-brand/10 text-brand font-semibold">
+                    PF ({emp.pfRate != null ? `${Number(emp.pfRate)}%` : '12%'})
+                  </span>
                 )}
                 {emp.esiApplicable !== false && (
-                  <span className="text-[9px] px-1.5 py-0.2 rounded bg-indigo-500/10 text-indigo-500 font-semibold">ESI</span>
+                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 font-semibold">
+                    ESI ({emp.esiRate != null ? `${Number(emp.esiRate)}%` : '3.75%'})
+                  </span>
                 )}
               </div>
 
@@ -390,10 +394,14 @@ export default function EmployeesPage() {
                         <span className="text-muted">{emp.gender}</span>
                       )}
                       {emp.pfApplicable !== false && (
-                        <span className="text-[9px] px-1 py-0.2 rounded bg-brand/10 text-brand font-medium">PF</span>
+                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-brand/10 text-brand font-medium">
+                          PF ({emp.pfRate != null ? `${Number(emp.pfRate)}%` : '12%'})
+                        </span>
                       )}
                       {emp.esiApplicable !== false && (
-                        <span className="text-[9px] px-1 py-0.2 rounded bg-indigo-500/10 text-indigo-500 font-medium">ESI</span>
+                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 font-medium">
+                          ESI ({emp.esiRate != null ? `${Number(emp.esiRate)}%` : '3.75%'})
+                        </span>
                       )}
                     </div>
                   </div>
@@ -566,7 +574,9 @@ function EmployeeFormModal({
     category: 'HOUSEKEEPING',
     customCategory: '',
     pfApplicable: true,
+    pfRate: 12,
     esiApplicable: true,
+    esiRate: 3.75,
     department: '',
     designation: '',
     employmentType: 'FULL_TIME',
@@ -597,7 +607,9 @@ function EmployeeFormModal({
           category: emp.category ?? 'HOUSEKEEPING',
           customCategory: emp.customCategory ?? '',
           pfApplicable: emp.pfApplicable ?? true,
+          pfRate: emp.pfRate != null ? Number(emp.pfRate) : 12,
           esiApplicable: emp.esiApplicable ?? true,
+          esiRate: emp.esiRate != null ? Number(emp.esiRate) : 3.75,
           department: emp.department ?? '',
           designation: emp.designation ?? '',
           employmentType: emp.employmentType,
@@ -619,7 +631,9 @@ function EmployeeFormModal({
           category: 'HOUSEKEEPING',
           customCategory: '',
           pfApplicable: true,
+          pfRate: 12,
           esiApplicable: true,
+          esiRate: 3.75,
           department: '',
           designation: '',
           employmentType: 'FULL_TIME',
@@ -663,6 +677,10 @@ function EmployeeFormModal({
         address: form.address?.trim() || '',
         fatherName: form.fatherName ? form.fatherName.trim() : undefined,
         customCategory: form.category === 'CUSTOM' ? form.customCategory?.trim() : undefined,
+        pfApplicable: form.pfApplicable,
+        pfRate: form.pfApplicable ? (form.pfRate != null ? Number(form.pfRate) : 12) : null,
+        esiApplicable: form.esiApplicable,
+        esiRate: form.esiApplicable ? (form.esiRate != null ? Number(form.esiRate) : 3.75) : null,
         department: form.department?.trim() || undefined,
         designation: form.designation?.trim() || undefined,
         clientId: form.clientId || null,
@@ -864,35 +882,125 @@ function EmployeeFormModal({
           />
         </div>
 
-        {/* Row 10: Statutory Deductions (PF & ESI Checklist) */}
-        <div className="bg-surface/50 border border-subtle rounded-xl p-3.5 space-y-2.5">
-          <div className="text-xs font-semibold text-fg">Statutory Deductions (Payslip Settings)</div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <label className="flex items-start gap-2.5 cursor-pointer select-none p-2 rounded-lg hover:bg-hover transition-colors">
-              <input
-                type="checkbox"
-                checked={form.pfApplicable ?? true}
-                onChange={(e) => setForm({ ...form, pfApplicable: e.target.checked })}
-                className="mt-0.5 rounded border-subtle text-brand focus:ring-brand"
-              />
-              <div>
-                <div className="text-xs font-medium text-fg">Apply Provident Fund (PF)</div>
-                <div className="text-[11px] text-muted">13% deduction on basic pay</div>
-              </div>
-            </label>
+        {/* Row 10: Statutory Deductions (PF & ESI Settings) */}
+        <div className="bg-surface/50 border border-subtle rounded-xl p-3.5 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="text-xs font-semibold text-fg">Statutory Deductions (Payslip Settings)</div>
+            <div className="text-[11px] text-muted">Configurable per employee</div>
+          </div>
 
-            <label className="flex items-start gap-2.5 cursor-pointer select-none p-2 rounded-lg hover:bg-hover transition-colors">
-              <input
-                type="checkbox"
-                checked={form.esiApplicable ?? true}
-                onChange={(e) => setForm({ ...form, esiApplicable: e.target.checked })}
-                className="mt-0.5 rounded border-subtle text-brand focus:ring-brand"
-              />
-              <div>
-                <div className="text-xs font-medium text-fg">Apply ESI</div>
-                <div className="text-[11px] text-muted">3.75% deduction on gross pay</div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            {/* Provident Fund (PF) Box */}
+            <div
+              className={`p-3 rounded-lg border transition-all ${
+                form.pfApplicable
+                  ? 'bg-elevated/40 border-brand/40 ring-1 ring-brand/10'
+                  : 'bg-elevated/10 border-subtle opacity-70'
+              }`}
+            >
+              <div className="flex items-start justify-between gap-2 mb-2">
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={form.pfApplicable ?? true}
+                    onChange={(e) => setForm({ ...form, pfApplicable: e.target.checked })}
+                    className="rounded border-subtle text-brand focus:ring-brand"
+                  />
+                  <span className="text-xs font-semibold text-fg">Provident Fund (PF)</span>
+                </label>
+                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-brand/10 text-brand font-medium">
+                  {form.pfApplicable ? `${form.pfRate ?? 12}% on basic` : 'Disabled'}
+                </span>
               </div>
-            </label>
+
+              {form.pfApplicable && (
+                <div className="mt-2 space-y-1.5 pt-2 border-t border-subtle/50">
+                  <label className="block text-[11px] text-fg-2 font-medium">Custom PF Rate (%)</label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      max="100"
+                      value={form.pfRate?.toString() ?? ''}
+                      placeholder="12"
+                      onChange={(e) => {
+                        const val = e.target.value === '' ? null : Number(e.target.value);
+                        setForm({ ...form, pfRate: val });
+                      }}
+                      className="w-full px-2.5 py-1.5 pr-8 rounded-lg bg-app border border-subtle text-fg text-xs focus:outline-none focus:border-brand font-mono"
+                    />
+                    <span className="absolute right-2.5 top-1.5 text-xs text-muted font-medium pointer-events-none">%</span>
+                  </div>
+                  <div className="text-[10px] text-muted flex items-center justify-between">
+                    <span>Auto-default: 12% on basic</span>
+                    <button
+                      type="button"
+                      onClick={() => setForm({ ...form, pfRate: 12 })}
+                      className="text-[10px] text-brand hover:underline"
+                    >
+                      Reset 12%
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* ESI Box */}
+            <div
+              className={`p-3 rounded-lg border transition-all ${
+                form.esiApplicable
+                  ? 'bg-elevated/40 border-purple-500/40 ring-1 ring-purple-500/10'
+                  : 'bg-elevated/10 border-subtle opacity-70'
+              }`}
+            >
+              <div className="flex items-start justify-between gap-2 mb-2">
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={form.esiApplicable ?? true}
+                    onChange={(e) => setForm({ ...form, esiApplicable: e.target.checked })}
+                    className="rounded border-subtle text-purple-500 focus:ring-purple-500"
+                  />
+                  <span className="text-xs font-semibold text-fg">ESI Deduction</span>
+                </label>
+                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 font-medium">
+                  {form.esiApplicable ? `${form.esiRate ?? 3.75}% on gross` : 'Disabled'}
+                </span>
+              </div>
+
+              {form.esiApplicable && (
+                <div className="mt-2 space-y-1.5 pt-2 border-t border-subtle/50">
+                  <label className="block text-[11px] text-fg-2 font-medium">Custom ESI Rate (%)</label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      max="100"
+                      value={form.esiRate?.toString() ?? ''}
+                      placeholder="3.75"
+                      onChange={(e) => {
+                        const val = e.target.value === '' ? null : Number(e.target.value);
+                        setForm({ ...form, esiRate: val });
+                      }}
+                      className="w-full px-2.5 py-1.5 pr-8 rounded-lg bg-app border border-subtle text-fg text-xs focus:outline-none focus:border-brand font-mono"
+                    />
+                    <span className="absolute right-2.5 top-1.5 text-xs text-muted font-medium pointer-events-none">%</span>
+                  </div>
+                  <div className="text-[10px] text-muted flex items-center justify-between">
+                    <span>Auto-default: 3.75% on gross</span>
+                    <button
+                      type="button"
+                      onClick={() => setForm({ ...form, esiRate: 3.75 })}
+                      className="text-[10px] text-purple-400 hover:underline"
+                    >
+                      Reset 3.75%
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 

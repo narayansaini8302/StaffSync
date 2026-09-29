@@ -47,6 +47,8 @@ const createSchema = z.object({
   customCategory: z.preprocess(emptyToUndefined, z.string().trim().optional().nullable()),
   pfApplicable: z.boolean().optional(),
   esiApplicable: z.boolean().optional(),
+  pfRate: z.number().nonnegative().optional().nullable(),
+  esiRate: z.number().nonnegative().optional().nullable(),
   department: z.preprocess(emptyToUndefined, z.string().trim().optional().nullable()),
   designation: z.preprocess(emptyToUndefined, z.string().trim().optional().nullable()),
   employmentType: z.enum(['FULL_TIME', 'PART_TIME', 'CONTRACT', 'INTERN']).optional(),

@@ -9,7 +9,7 @@ export const payrollConfig = {
     specialAllowance: 0.3,
   },
 
-  pfRate: 0.13, // 13% on basic pay
+  pfRate: 0.12, // 12% on basic pay (standard statutory default)
   esiRate: 0.0375, // 3.75% on gross pay
 
   professionalTax: {

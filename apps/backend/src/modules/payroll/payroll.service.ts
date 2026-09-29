@@ -149,11 +149,17 @@ export async function computePayslipForEmployee(
   const specialAllowance = round2(basePay - basic - hra);
   const grossPay = round2(basic + hra + specialAllowance);
 
-  // PF: 13% on basic pay (if pfApplicable !== false)
-  const pf = employee.pfApplicable !== false ? round2(basic * payrollConfig.pfRate) : 0;
+  // PF: custom employee rate or standard default 12% on basic pay (if pfApplicable !== false)
+  const empPfRate = employee.pfRate != null && Number(employee.pfRate) >= 0
+    ? Number(employee.pfRate) / 100
+    : payrollConfig.pfRate;
+  const pf = employee.pfApplicable !== false ? round2(basic * empPfRate) : 0;
 
-  // ESI: 3.75% on gross pay (if esiApplicable !== false)
-  const esi = employee.esiApplicable !== false ? round2(grossPay * payrollConfig.esiRate) : 0;
+  // ESI: custom employee rate or standard default 3.75% on gross pay (if esiApplicable !== false)
+  const empEsiRate = employee.esiRate != null && Number(employee.esiRate) >= 0
+    ? Number(employee.esiRate) / 100
+    : payrollConfig.esiRate;
+  const esi = employee.esiApplicable !== false ? round2(grossPay * empEsiRate) : 0;
 
   const professionalTax =
     grossPay > payrollConfig.professionalTax.threshold
@@ -173,9 +179,12 @@ export async function computePayslipForEmployee(
   }
   const incomeTax = round2(annualTax / 12);
 
+  const pfPct = round2(empPfRate * 100);
+  const esiPct = round2(empEsiRate * 100);
+
   const deductions = [
-    { label: 'Provident Fund (PF)', amount: pf },
-    { label: 'Employee State Insurance (ESI)', amount: esi },
+    { label: `Provident Fund (PF ${pfPct}%)`, amount: pf },
+    { label: `Employee State Insurance (ESI ${esiPct}%)`, amount: esi },
     { label: 'Professional Tax', amount: professionalTax },
     { label: 'Income Tax', amount: incomeTax },
   ].filter((d) => d.amount > 0);

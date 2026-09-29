@@ -17,6 +17,15 @@ async function main() {
   await prisma.$connect();
   logger.info('✅ PostgreSQL connected');
 
+  try {
+    await prisma.$executeRawUnsafe(`
+      ALTER TABLE "employees" ADD COLUMN IF NOT EXISTS "pfRate" numeric(5,2);
+      ALTER TABLE "employees" ADD COLUMN IF NOT EXISTS "esiRate" numeric(5,2);
+    `);
+  } catch (err) {
+    logger.warn('Could not auto-add pfRate/esiRate columns:', err);
+  }
+
   const server = app.listen(env.PORT, '0.0.0.0', () => {
     logger.info(`🚀 Backend listening on http://0.0.0.0:${env.PORT}`);
   });
