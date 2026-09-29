@@ -48,7 +48,7 @@ export default function SuperAdminOverview() {
           <li>View global stats across all tenant companies</li>
           <li>Create new companies with their first admin</li>
           <li>Add additional admins to any company</li>
-          <li>Activate or deactivate entire companies</li>
+          <li>Activate, deactivate, or permanently delete tenant companies</li>
         </ul>
       </div>
     </div>

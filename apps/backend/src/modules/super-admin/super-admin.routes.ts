@@ -90,9 +90,13 @@ superAdminRouter.patch('/companies/:id', async (req, res) => {
 superAdminRouter.delete('/companies/:id', async (req, res) => {
   try {
     await deleteCompany(req.params.id);
-    res.json({ ok: true });
+    res.json({ ok: true, message: 'Company and all associated data permanently deleted' });
   } catch (e: any) {
-    res.status(500).json({ error: 'Failed to delete company' });
+    if (e.message === 'COMPANY_NOT_FOUND') {
+      return res.status(404).json({ error: 'Company not found' });
+    }
+    console.error('Delete company failed:', e);
+    res.status(500).json({ error: e?.message || 'Failed to delete company' });
   }
 });
 

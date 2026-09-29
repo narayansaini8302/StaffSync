@@ -134,8 +134,76 @@ export async function updateCompany(
 }
 
 export async function deleteCompany(id: string) {
-  // Cascade will remove users, employees, attendance, etc.
-  return prisma.company.delete({ where: { id } });
+  const company = await prisma.company.findUnique({ where: { id } });
+  if (!company) throw new Error('COMPANY_NOT_FOUND');
+
+  return prisma.$transaction(async (tx) => {
+    // 1. Delete invoice payments for this company
+    await tx.invoicePayment.deleteMany({ where: { companyId: id } });
+
+    // 2. Delete invoice line items
+    await tx.taxInvoiceLineItem.deleteMany({
+      where: { invoice: { companyId: id } },
+    });
+
+    // 3. Delete tax invoices
+    await tx.taxInvoice.deleteMany({ where: { companyId: id } });
+
+    // 4. Delete client category rates
+    await tx.clientCategoryRate.deleteMany({
+      where: { client: { companyId: id } },
+    });
+
+    // 5. Delete employee assignments
+    await tx.employeeAssignment.deleteMany({
+      where: { client: { companyId: id } },
+    });
+
+    // 6. Delete clients
+    await tx.client.deleteMany({ where: { companyId: id } });
+
+    // 7. Delete payslip line items
+    await tx.payslipLineItem.deleteMany({
+      where: { payslip: { payrollRun: { companyId: id } } },
+    });
+
+    // 8. Delete payslips
+    await tx.payslip.deleteMany({
+      where: { payrollRun: { companyId: id } },
+    });
+
+    // 9. Delete payroll runs
+    await tx.payrollRun.deleteMany({ where: { companyId: id } });
+
+    // 10. Delete attendance logs
+    await tx.attendanceLog.deleteMany({ where: { companyId: id } });
+
+    // 11. Delete attendance days
+    await tx.attendanceDay.deleteMany({ where: { companyId: id } });
+
+    // 12. Delete biometrics & face embeddings
+    await tx.biometric.deleteMany({
+      where: { employee: { companyId: id } },
+    });
+    await tx.faceEmbedding.deleteMany({
+      where: { employee: { companyId: id } },
+    });
+
+    // 13. Disconnect user from employee before deleting users
+    await tx.employee.updateMany({
+      where: { companyId: id },
+      data: { userId: null },
+    });
+
+    // 14. Delete employees
+    await tx.employee.deleteMany({ where: { companyId: id } });
+
+    // 15. Delete users
+    await tx.user.deleteMany({ where: { companyId: id } });
+
+    // 16. Finally delete company record
+    return tx.company.delete({ where: { id } });
+  });
 }
 
 // ===========================================================================
