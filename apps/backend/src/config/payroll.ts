@@ -1,5 +1,5 @@
 export const payrollConfig = {
-  daysInMonth: 30,
+  daysInMonth: 30, // Fallback default; calculations are based dynamically on calendar days of the month
   halfDayFactor: 0.5,
   standardHoursPerDay: 8,
 

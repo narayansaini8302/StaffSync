@@ -18,6 +18,12 @@ function startOfMonthUTC(d: Date) {
 function endOfMonthUTC(d: Date) {
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0));
 }
+export function getCalendarDaysInPeriod(periodStart: Date, periodEnd: Date): number {
+  const utcStart = Date.UTC(periodStart.getUTCFullYear(), periodStart.getUTCMonth(), periodStart.getUTCDate());
+  const utcEnd = Date.UTC(periodEnd.getUTCFullYear(), periodEnd.getUTCMonth(), periodEnd.getUTCDate());
+  const msPerDay = 24 * 60 * 60 * 1000;
+  return Math.max(1, Math.round((utcEnd - utcStart) / msPerDay) + 1);
+}
 function round2(n: number) {
   return Math.round(n * 100) / 100;
 }
@@ -33,6 +39,8 @@ export interface ComputedPayslip {
   email?: string | null;
   category: EmployeeCategoryKey;
   customCategory?: string | null;
+  calendarDays: number;
+  dailyRate: number;
   hourlyRate: number;
   totalHours: number;
 
@@ -104,23 +112,37 @@ export async function computePayslipForEmployee(
 
   let totalHours = totalMinutes / 60;
 
+  // Calendar days basis:
+  // 1. Calculate exact calendar days in the period (e.g. 28, 29, 30, or 31 days)
+  const calendarDays = getCalendarDaysInPeriod(periodStart, periodEnd);
+
   // Unmarked days handling:
-  // If an employee is completely unmarked or has unmarked days in the period,
-  // automatically count those unmarked days as ABSENT (deduct pay), NOT full present.
-  const totalPeriodDays = periodEnd ? periodEnd.getUTCDate() : payrollConfig.daysInMonth;
+  // Count unmarked calendar days as ABSENT (unpaid)
   const markedDaysCount = presentDays + halfDays + leaveDays + absentDays;
-  if (markedDaysCount < totalPeriodDays) {
-    absentDays += (totalPeriodDays - markedDaysCount);
+  if (markedDaysCount < calendarDays) {
+    absentDays += (calendarDays - markedDaysCount);
   }
 
   const category = (employee.category as EmployeeCategoryKey) || 'HOUSEKEEPING';
   const catDef = categoryDefaults[category] || categoryDefaults.HOUSEKEEPING;
-  const hourlyRate =
-    employee.baseSalary && Number(employee.baseSalary) > 0
-      ? round2(Number(employee.baseSalary) / (payrollConfig.daysInMonth * payrollConfig.standardHoursPerDay))
-      : catDef.perHour;
 
-  const basePay = round2(totalHours * hourlyRate);
+  // Monthly base salary
+  const monthlySalary =
+    employee.baseSalary && Number(employee.baseSalary) > 0
+      ? Number(employee.baseSalary)
+      : catDef.gross;
+
+  // Standard hours and rates strictly on calendar days basis (not hardcoded 30 days)
+  const standardHours = calendarDays * payrollConfig.standardHoursPerDay;
+  const dailyRate = round2(monthlySalary / calendarDays);
+  const hourlyRate = round2(monthlySalary / standardHours);
+
+  // Base pay calculation according to calendar days:
+  // - Full attendance (totalHours >= standardHours) earns full monthly salary (+ overtime if any)
+  // - Partial attendance pro-rated by worked/paid hours against total calendar standard hours
+  const basePay = totalHours >= standardHours
+    ? round2(monthlySalary + (totalHours - standardHours) * hourlyRate)
+    : round2((monthlySalary / standardHours) * totalHours);
 
   const basic = round2(basePay * payrollConfig.earningsSplit.basic);
   const hra = round2(basePay * payrollConfig.earningsSplit.hra);
@@ -174,6 +196,8 @@ export async function computePayslipForEmployee(
     email: employee.email || null,
     category,
     customCategory: employee.customCategory ?? null,
+    calendarDays,
+    dailyRate,
     hourlyRate,
     totalHours: round2(totalHours),
     presentDays,
@@ -222,6 +246,8 @@ async function renderPayslipPdf(input: {
       input.slip.category === 'CUSTOM'
         ? input.slip.customCategory || 'Custom'
         : categoryDefaults[input.slip.category]?.label || input.slip.category,
+    calendarDays: input.slip.calendarDays ?? getCalendarDaysInPeriod(input.periodStart, input.periodEnd),
+    dailyRate: fmt(input.slip.dailyRate ?? (input.slip.hourlyRate * payrollConfig.standardHoursPerDay)),
     hourlyRate: fmt(input.slip.hourlyRate),
     totalHours: input.slip.totalHours.toFixed(2),
     presentDays: input.slip.presentDays,
@@ -475,10 +501,15 @@ export async function regeneratePayslipPdf(
   });
   const category = (employee?.category as EmployeeCategoryKey) || 'HOUSEKEEPING';
   const catDef = categoryDefaults[category] || categoryDefaults.HOUSEKEEPING;
-  const hourlyRate =
+  
+  const calendarDays = getCalendarDaysInPeriod(slip.periodStart, slip.periodEnd);
+  const monthlySalary =
     employee?.baseSalary && Number(employee.baseSalary) > 0
-      ? round2(Number(employee.baseSalary) / (payrollConfig.daysInMonth * payrollConfig.standardHoursPerDay))
-      : catDef.perHour;
+      ? Number(employee.baseSalary)
+      : catDef.gross;
+  const standardHours = calendarDays * payrollConfig.standardHoursPerDay;
+  const dailyRate = round2(monthlySalary / calendarDays);
+  const hourlyRate = round2(monthlySalary / standardHours);
 
   // Recompute hours from attendance_days in the period
   const days = await prisma.attendanceDay.findMany({
@@ -510,10 +541,9 @@ export async function regeneratePayslipPdf(
   }
 
   let totalHours = totalMinutes / 60;
-  const totalPeriodDays = slip.periodEnd ? new Date(slip.periodEnd).getUTCDate() : payrollConfig.daysInMonth;
   const markedDaysCount = presentDays + halfDays + leaveDays + absentDays;
-  if (markedDaysCount < totalPeriodDays) {
-    absentDays += (totalPeriodDays - markedDaysCount);
+  if (markedDaysCount < calendarDays) {
+    absentDays += (calendarDays - markedDaysCount);
   }
 
   const earnings = slip.lineItems
@@ -530,6 +560,8 @@ export async function regeneratePayslipPdf(
     email: slip.email,
     category,
     customCategory: employee?.customCategory ?? null,
+    calendarDays,
+    dailyRate,
     hourlyRate,
     totalHours,
     presentDays,

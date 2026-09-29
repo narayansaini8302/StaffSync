@@ -25,6 +25,13 @@ function monthLabel(iso: string) {
   const d = new Date(iso);
   return d.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
 }
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleDateString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
+}
 function formatMoney(v: string | number, currency = 'INR') {
   const n = typeof v === 'string' ? Number(v) : v;
   return new Intl.NumberFormat('en-IN', {
@@ -329,8 +336,7 @@ function CreateRunModal({
     <Modal open={open} onClose={onClose} title="Run Payroll">
       <form onSubmit={submit} className="space-y-4">
         <div className="text-sm text-fg-2">
-          This will compute salaries for all active employees with attendance in
-          the period, generate PDFs, and email them.
+          This will compute salaries for all active employees on an exact calendar days basis (e.g. 28, 29, 30, or 31 days depending on month), generate PDFs, and email them.
         </div>
 
         <div>
@@ -446,7 +452,16 @@ function RunDetailsModal({
         {!run ? null : (
           <div className="space-y-4">
             <div className="flex items-center justify-between flex-wrap gap-4 pb-2 border-b border-subtle">
-              <div className="flex gap-6 text-sm">
+              <div className="flex gap-6 text-sm flex-wrap items-center">
+                <div>
+                  <span className="text-fg-2">Period: </span>
+                  <span className="font-medium text-fg">
+                    {formatDate(run.periodStart)} – {formatDate(run.periodEnd)}
+                  </span>
+                  <span className="ml-1.5 text-xs text-muted font-mono">
+                    ({Math.max(1, Math.round((new Date(run.periodEnd).getTime() - new Date(run.periodStart).getTime()) / (24 * 60 * 60 * 1000)) + 1)} calendar days)
+                  </span>
+                </div>
                 <div>
                   <span className="text-fg-2">Employees: </span>
                   <span className="font-mono text-fg">{run.totalEmployees}</span>

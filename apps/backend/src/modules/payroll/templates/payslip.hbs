@@ -117,6 +117,7 @@
     </div>
     <div class="box">
       <div><strong>Attendance</strong></div>
+      <div>Calendar days: <strong>{{calendarDays}} days</strong></div>
       <div>Days present: {{presentDays}}</div>
       {{#if leaveDays}}<div>Leave (paid): {{leaveDays}} days</div>{{/if}}
       <div>Half days: {{halfDays}}</div>
@@ -126,8 +127,8 @@
   </div>
 
   <div class="calc-basis">
-    <strong>Calculation basis:</strong>
-    {{totalHours}} hours × ₹{{hourlyRate}}/hour ({{category}} rate) = ₹{{grossPay}}
+    <strong>Calculation basis (Calendar days):</strong>
+    {{calendarDays}} calendar days in period • Daily rate: ₹{{dailyRate}}/day • Hourly rate: ₹{{hourlyRate}}/hr • {{totalHours}} hrs worked = ₹{{grossPay}}
   </div>
 
   <table>
