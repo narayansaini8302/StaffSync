@@ -14,6 +14,7 @@ import {
   ArrowRight,
   AlertCircle,
 } from 'lucide-react';
+import { StaffSyncIcon } from '@/components/ui/logo';
 
 export type LoginMode = 'admin' | 'super-admin';
 
@@ -103,15 +104,11 @@ export function UnifiedLoginForm({ defaultMode }: UnifiedLoginFormProps) {
     <div className="w-full max-w-md mx-auto">
       {/* Header Branding */}
       <div className="text-center mb-6">
-        <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-zinc-900/90 border border-zinc-800 shadow-xl mb-3.5 text-zinc-100">
-          {isSuper ? (
-            <ShieldCheck className="w-7 h-7 text-indigo-400" />
-          ) : (
-            <Building2 className="w-7 h-7 text-blue-400" />
-          )}
+        <div className="inline-flex items-center justify-center mb-3.5">
+          <StaffSyncIcon size={56} variant={isSuper ? 'super-admin' : 'default'} />
         </div>
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-100">
-          StaffSync Portal
+          Staff<span className={isSuper ? "bg-gradient-to-r from-indigo-400 via-indigo-300 to-purple-400 bg-clip-text text-transparent" : "bg-gradient-to-r from-sky-400 via-blue-500 to-indigo-500 bg-clip-text text-transparent"}>Sync</span> Portal
         </h1>
         <p className="text-sm text-zinc-400 mt-1">
           Choose your account type to continue

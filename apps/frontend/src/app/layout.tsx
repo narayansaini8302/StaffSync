@@ -18,6 +18,14 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: 'StaffSync - Attendance, Payroll & Invoicing',
   description: 'Production-grade staff management, manual attendance, automated payroll and client invoicing system',
+  icons: {
+    icon: [
+      { url: '/icon.svg', type: 'image/svg+xml' },
+      { url: '/favicon.ico', sizes: 'any' },
+    ],
+    shortcut: '/icon.svg',
+    apple: '/icon.svg',
+  },
 };
 
 export default function RootLayout({

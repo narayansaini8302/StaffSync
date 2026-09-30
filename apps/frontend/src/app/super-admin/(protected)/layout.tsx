@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useSuperAdminAuth } from '@/lib/super-admin-auth';
 import { Home, Building2, LogOut, Menu, X } from 'lucide-react';
+import { StaffSyncLogo } from '@/components/ui/logo';
 
 const nav = [
   { href: '/super-admin', label: 'Overview', icon: Home },
@@ -51,10 +52,7 @@ export default function SuperAdminLayout({
           >
             <Menu size={22} />
           </button>
-          <div className="flex items-center gap-2">
-            <span className="text-xl">🛡️</span>
-            <span className="font-semibold text-sm">Super Admin</span>
-          </div>
+          <StaffSyncLogo size="sm" href="/super-admin" theme="super-admin" subtitle="Super Admin" />
         </div>
 
         <div className="w-8 h-8 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-xs font-semibold text-blue-400">
@@ -71,10 +69,7 @@ export default function SuperAdminLayout({
           />
           <div className="fixed inset-y-0 left-0 w-72 max-w-[85vw] bg-slate-900 flex flex-col shadow-2xl border-r border-slate-800 z-50">
             <div className="px-5 py-4 border-b border-slate-800 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-xl">🛡️</span>
-                <span className="font-semibold text-sm">Super Admin</span>
-              </div>
+              <StaffSyncLogo size="sm" href="/super-admin" theme="super-admin" subtitle="Super Admin" />
               <button
                 onClick={() => setMobileOpen(false)}
                 className="p-1.5 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition"
@@ -128,10 +123,7 @@ export default function SuperAdminLayout({
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex md:w-60 md:shrink-0 bg-slate-900 border-r border-slate-800 flex-col">
         <div className="px-5 py-4 border-b border-slate-800">
-          <div className="flex items-center gap-2">
-            <span className="text-xl">🛡️</span>
-            <span className="font-semibold text-sm">Super Admin</span>
-          </div>
+          <StaffSyncLogo size="md" href="/super-admin" theme="super-admin" subtitle="Super Admin" />
         </div>
 
         <nav className="flex-1 px-2 py-3 space-y-1">

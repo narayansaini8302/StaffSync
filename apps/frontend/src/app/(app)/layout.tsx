@@ -17,6 +17,7 @@ import {
   X,
 } from 'lucide-react';
 import { ThemeToggle } from '@/lib/theme-toggle';
+import { StaffSyncLogo } from '@/components/ui/logo';
 
 const nav = [
   { href: '/', label: 'Dashboard', icon: Home },
@@ -66,10 +67,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           >
             <Menu size={22} />
           </button>
-          <div className="flex items-center gap-2">
-            <span className="text-xl">🎯</span>
-            <span className="font-semibold text-sm text-fg tracking-tight">StaffSync</span>
-          </div>
+          <StaffSyncLogo size="sm" href="/" />
         </div>
 
         <div className="flex items-center gap-2">
@@ -92,10 +90,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           {/* Drawer Sidebar */}
           <div className="fixed inset-y-0 left-0 w-72 max-w-[85vw] bg-surface flex flex-col shadow-2xl border-r border-subtle z-50">
             <div className="px-5 py-4 border-b border-subtle flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-xl">🎯</span>
-                <span className="font-bold text-sm text-fg tracking-tight">StaffSync</span>
-              </div>
+              <StaffSyncLogo size="sm" href="/" />
               <button
                 onClick={() => setMobileNavOpen(false)}
                 className="p-1.5 rounded-lg text-fg-2 hover:text-fg hover:bg-hover transition touch-manipulation"
@@ -162,10 +157,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       {/* Desktop Persistent Sidebar (hidden on mobile, visible on md+) */}
       <aside className="hidden md:flex md:w-60 md:shrink-0 bg-surface border-r border-subtle flex-col">
         <div className="px-5 py-4 border-b border-subtle">
-          <div className="flex items-center gap-2">
-            <span className="text-xl">🎯</span>
-            <span className="font-semibold text-sm text-fg tracking-tight">StaffSync</span>
-          </div>
+          <StaffSyncLogo size="md" href="/" subtitle="Workforce Suite" />
         </div>
 
         <nav className="flex-1 px-2 py-3 space-y-1 overflow-y-auto">

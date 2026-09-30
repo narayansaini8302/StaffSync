@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <!-- Background subtle dark pill / circle -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0B132B" />
+      <stop offset="100%" stop-color="#1C2541" />
+    </linearGradient>
+
+    <!-- Cyan to Blue Gradient (Left loop / Staff) -->
+    <linearGradient id="cyanLoop" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#22D3EE" />
+      <stop offset="50%" stop-color="#06B6D4" />
+      <stop offset="100%" stop-color="#0284C7" />
+    </linearGradient>
+
+    <!-- Royal to Indigo Gradient (Right loop / Sync) -->
+    <linearGradient id="blueLoop" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38BDF8" />
+      <stop offset="50%" stop-color="#2563EB" />
+      <stop offset="100%" stop-color="#4F46E5" />
+    </linearGradient>
+
+    <!-- Glow Filter -->
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#0284C7" flood-opacity="0.45" />
+    </filter>
+  </defs>
+
+  <!-- Dark rounded container -->
+  <rect width="64" height="64" rx="16" fill="url(#bgGrad)" />
+  <rect width="64" height="64" rx="16" stroke="rgba(255,255,255,0.08)" stroke-width="1.5" />
+
+  <!-- Dual-S Synchronization Infinity Symbol -->
+  <g filter="url(#glow)">
+    <!-- Right blue S-curve / Sync loop -->
+    <path
+      d="M32 32 C38 23 48 23 51 29 C54 35 48 42 42 42 C36 42 32 38 28 42 C24 46 25 50 31 51 C37 52 46 49 50 43"
+      stroke="url(#blueLoop)"
+      stroke-width="5.5"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      fill="none"
+    />
+
+    <!-- Left cyan S-curve / Staff loop -->
+    <path
+      d="M32 32 C26 41 16 41 13 35 C10 29 16 22 22 22 C28 22 32 26 36 22 C40 18 39 14 33 13 C27 12 18 15 14 21"
+      stroke="url(#cyanLoop)"
+      stroke-width="5.5"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      fill="none"
+    />
+
+    <!-- Interlocking focal nodes -->
+    <circle cx="32" cy="32" r="2.8" fill="#38BDF8" />
+  </g>
+</svg>
