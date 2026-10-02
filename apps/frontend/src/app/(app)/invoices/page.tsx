@@ -1463,7 +1463,7 @@ function GenerateInvoiceModal({
         <div className="text-xs text-fg-2 bg-brand-soft border border-brand/30 rounded-lg p-3">
           The invoice will be computed from all <strong>active assignments</strong> for
           the selected client during the period. Hours calculate from daily manual attendance
-          (Full Day 8h & Half Day 4h).
+          (Full Day 8h & Half Day 4h). Unmarked days are treated as absent.
         </div>
 
         <div>

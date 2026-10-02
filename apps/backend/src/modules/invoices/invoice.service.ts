@@ -275,14 +275,10 @@ export async function computeInvoiceLines(
     const calendarDays = Math.max(1, Math.round((utcEnd - utcStart) / (24 * 60 * 60 * 1000)) + 1);
     const standardHours = calendarDays * 8;
 
-    // If attendance was logged, use logged hours.
-    // If no daily attendance records exist for this period yet,
-    // default to full period standard hours (calendar days * 8h)
-    // so the employee's monthly contracted salary is accurately billed.
-    if (days.length === 0) {
-      hoursWorked = standardHours;
-    } else if (hoursWorked === 0) {
-      // Attendance was explicitly marked (e.g. absent on all days)
+    // Unmarked attendance is treated as ABSENT (0 billable hours).
+    // Only explicitly logged attendance (PRESENT, HALF_DAY, paid LEAVE) counts toward billable hours.
+    if (hoursWorked === 0) {
+      // Employee has 0 billable hours (unmarked attendance or all days absent)
       continue;
     }
 
