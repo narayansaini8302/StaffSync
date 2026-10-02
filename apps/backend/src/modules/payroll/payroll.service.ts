@@ -27,9 +27,12 @@ export function getCalendarDaysInPeriod(periodStart: Date, periodEnd: Date): num
 function round2(n: number) {
   return Math.round(n * 100) / 100;
 }
+function roundup(n: number): number {
+  return Math.ceil(Math.round(n * 100) / 100);
+}
 function fmt(n: number | Prisma.Decimal) {
   const num = typeof n === 'number' ? n : Number(n);
-  return num.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return num.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 }
 
 export interface ComputedPayslip {
@@ -140,14 +143,15 @@ export async function computePayslipForEmployee(
   // Base pay calculation according to calendar days:
   // - Full attendance (totalHours >= standardHours) earns full monthly salary (+ overtime if any)
   // - Partial attendance pro-rated by worked/paid hours against total calendar standard hours
-  const basePay = totalHours >= standardHours
-    ? round2(monthlySalary + (totalHours - standardHours) * hourlyRate)
-    : round2((monthlySalary / standardHours) * totalHours);
+  const rawBasePay = totalHours >= standardHours
+    ? monthlySalary + (totalHours - standardHours) * hourlyRate
+    : (monthlySalary / standardHours) * totalHours;
+  const basePay = roundup(rawBasePay);
 
   const basic = round2(basePay * payrollConfig.earningsSplit.basic);
   const hra = round2(basePay * payrollConfig.earningsSplit.hra);
   const specialAllowance = round2(basePay - basic - hra);
-  const grossPay = round2(basic + hra + specialAllowance);
+  const grossPay = roundup(basic + hra + specialAllowance);
 
   // PF: custom employee rate or standard default 12% on basic pay (if pfApplicable !== false)
   const empPfRate = employee.pfRate != null && Number(employee.pfRate) >= 0
@@ -190,7 +194,7 @@ export async function computePayslipForEmployee(
   ].filter((d) => d.amount > 0);
 
   const totalDeductions = round2(deductions.reduce((s, d) => s + d.amount, 0));
-  const netPay = round2(grossPay - totalDeductions);
+  const netPay = roundup(grossPay - totalDeductions);
 
   const earnings = [
     { label: 'Basic', amount: basic },
@@ -439,8 +443,8 @@ export async function processPayrollRun(
     where: { id: run.id },
     data: {
       status: 'COMPLETED',
-      totalGross: round2(totalGross),
-      totalNet: round2(totalNet),
+      totalGross: roundup(totalGross),
+      totalNet: roundup(totalNet),
       totalEmployees: count,
     },
   });
@@ -579,9 +583,9 @@ export async function regeneratePayslipPdf(
     leaveDays,
     overtimeMins: slip.overtimeMins,
     lateMins: slip.lateMins,
-    grossPay: Number(slip.grossPay),
-    totalDeductions: Number(slip.totalDeductions),
-    netPay: Number(slip.netPay),
+    grossPay: roundup(Number(slip.grossPay)),
+    totalDeductions: round2(Number(slip.totalDeductions)),
+    netPay: roundup(Number(slip.netPay)),
     earnings,
     deductions,
   };

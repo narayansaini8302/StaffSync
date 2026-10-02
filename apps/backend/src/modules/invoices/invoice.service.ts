@@ -75,10 +75,14 @@ function round2(n: number): number {
   return Math.round(n * 100) / 100;
 }
 
+function roundup(n: number): number {
+  return Math.ceil(Math.round(n * 100) / 100);
+}
+
 function fmt(n: number | any): string {
   const num = typeof n === 'number' ? n : Number(n);
   return num.toLocaleString('en-IN', {
-    minimumFractionDigits: 2,
+    minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   });
 }
@@ -153,7 +157,7 @@ function attachPaymentSummary<T extends { totalAmount: any; paidAmount?: any }>(
   return {
     ...inv,
     paidAmount: paid,
-    pendingAmount: Math.max(0, round2(total - paid)),
+    pendingAmount: Math.max(0, roundup(total - paid)),
   };
 }
 
@@ -169,7 +173,7 @@ async function syncPaymentStatus(companyId: string, invoiceId: string) {
   });
 
   const totalPaid = round2(payments.reduce((s, p) => s + Number(p.amount), 0));
-  const invoiceTotal = round2(Number(invoice.totalAmount));
+  const invoiceTotal = roundup(Number(invoice.totalAmount));
 
   let status = invoice.status;
   if (totalPaid >= invoiceTotal) {
@@ -197,7 +201,7 @@ async function syncPaymentStatus(companyId: string, invoiceId: string) {
   return {
     ...updated,
     paidAmount: totalPaid,
-    pendingAmount: Math.max(0, round2(invoiceTotal - totalPaid)),
+    pendingAmount: Math.max(0, roundup(invoiceTotal - totalPaid)),
   };
 }
 
@@ -298,7 +302,7 @@ export async function computeInvoiceLines(
       hourlyRate = catDef.perHour;
     }
 
-    const amount = round2(hoursWorked * hourlyRate);
+    const amount = roundup(hoursWorked * hourlyRate);
 
     lines.push({
       employeeId: employee.id,
@@ -311,7 +315,7 @@ export async function computeInvoiceLines(
     });
   }
 
-  const subtotal = round2(lines.reduce((s, l) => s + l.amount, 0));
+  const subtotal = roundup(lines.reduce((s, l) => s + l.amount, 0));
   return { lines, subtotal };
 }
 
@@ -353,7 +357,7 @@ export async function generateInvoice(companyId: string, input: GenerateInvoiceI
   const cgstAmount = gstMode === 'cgst_sgst' ? round2(gstAmount / 2) : 0;
   const sgstAmount = gstMode === 'cgst_sgst' ? round2(gstAmount / 2) : 0;
   const igstAmount = gstMode === 'igst' ? gstAmount : 0;
-  const totalAmount = round2(subtotal + gstAmount);
+  const totalAmount = roundup(subtotal + gstAmount);
 
   const invoiceNumber = input.invoiceNumber?.trim() || (await generateInvoiceNumber(companyId, 'INV'));
 
@@ -428,12 +432,12 @@ export async function createManualInvoice(companyId: string, input: CreateManual
       description: it.description || `Service item #${idx + 1}`,
       quantity: qty,
       rate,
-      amount: round2(qty * rate),
+      amount: roundup(qty * rate),
       category: it.category || 'HOUSEKEEPING',
     };
   });
 
-  const subtotal = round2(computedItems.reduce((acc, it) => acc + it.amount, 0));
+  const subtotal = roundup(computedItems.reduce((acc, it) => acc + it.amount, 0));
   const companyState = getCompanyStateCode();
   const clientState = input.clientStateCode || client.stateCode || '';
   const rawGstMode = input.gstMode ?? 'auto';
@@ -453,7 +457,7 @@ export async function createManualInvoice(companyId: string, input: CreateManual
     igstAmount = round2((subtotal * GST_RATE) / 100);
   }
 
-  const totalAmount = round2(subtotal + cgstAmount + sgstAmount + igstAmount);
+  const totalAmount = roundup(subtotal + cgstAmount + sgstAmount + igstAmount);
   const invoiceNumber = input.invoiceNumber?.trim() || (await generateInvoiceNumber(companyId, 'GEN'));
   const issuedAt = input.issuedAt ? new Date(input.issuedAt) : new Date();
   const dueDate = input.dueDate ? new Date(input.dueDate) : null;

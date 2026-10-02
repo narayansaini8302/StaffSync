@@ -48,11 +48,12 @@ function monthLabel(iso: string) {
 }
 
 function formatMoney(v: string | number | undefined | null, currency = 'INR') {
-  if (v === undefined || v === null) return '₹0.00';
+  if (v === undefined || v === null) return '₹0';
   const n = typeof v === 'string' ? Number(v) : v;
   return new Intl.NumberFormat('en-IN', {
     style: 'currency',
     currency,
+    minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   }).format(isNaN(n) ? 0 : n);
 }
@@ -1987,7 +1988,7 @@ function InvoiceGeneratorSection({
     igst = Math.round(subtotal * 0.18 * 100) / 100;
   }
 
-  const grandTotal = Math.round((subtotal + cgst + sgst + igst) * 100) / 100;
+  const grandTotal = Math.ceil(Math.round((subtotal + cgst + sgst + igst) * 100) / 100);
   // Amount in words kept default (auto-computed from grand total)
   const amountInWords = numberToWordsIndian(grandTotal);
 
