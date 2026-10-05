@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 
 interface LogoProps {
@@ -8,6 +8,8 @@ interface LogoProps {
   href?: string;
   className?: string;
   theme?: 'default' | 'super-admin';
+  customLogoUrl?: string | null;
+  customName?: string | null;
 }
 
 export function StaffSyncIcon({
@@ -32,20 +34,20 @@ export function StaffSyncIcon({
     >
       <defs>
         <linearGradient id={`bgGrad-${variant}`} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stop-color={isSuper ? '#0F172A' : '#0B132B'} />
-          <stop offset="100%" stop-color={isSuper ? '#1E1B4B' : '#1C2541'} />
+          <stop offset="0%" stopColor={isSuper ? '#0F172A' : '#0B132B'} />
+          <stop offset="100%" stopColor={isSuper ? '#1E1B4B' : '#1C2541'} />
         </linearGradient>
 
         <linearGradient id={`loop1-${variant}`} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stop-color={isSuper ? '#818CF8' : '#22D3EE'} />
-          <stop offset="50%" stop-color={isSuper ? '#6366F1' : '#06B6D4'} />
-          <stop offset="100%" stop-color={isSuper ? '#4F46E5' : '#0284C7'} />
+          <stop offset="0%" stopColor={isSuper ? '#818CF8' : '#22D3EE'} />
+          <stop offset="50%" stopColor={isSuper ? '#6366F1' : '#06B6D4'} />
+          <stop offset="100%" stopColor={isSuper ? '#4F46E5' : '#0284C7'} />
         </linearGradient>
 
         <linearGradient id={`loop2-${variant}`} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stop-color={isSuper ? '#A5B4FC' : '#38BDF8'} />
-          <stop offset="50%" stop-color={isSuper ? '#818CF8' : '#2563EB'} />
-          <stop offset="100%" stop-color={isSuper ? '#6366F1' : '#4F46E5'} />
+          <stop offset="0%" stopColor={isSuper ? '#A5B4FC' : '#38BDF8'} />
+          <stop offset="50%" stopColor={isSuper ? '#818CF8' : '#2563EB'} />
+          <stop offset="100%" stopColor={isSuper ? '#6366F1' : '#4F46E5'} />
         </linearGradient>
 
         <filter id={`glow-${variant}`} x="-20%" y="-20%" width="140%" height="140%">
@@ -53,8 +55,8 @@ export function StaffSyncIcon({
             dx="0"
             dy="2"
             stdDeviation="3"
-            flood-color={isSuper ? '#6366F1' : '#0284C7'}
-            flood-opacity="0.5"
+            floodColor={isSuper ? '#6366F1' : '#0284C7'}
+            floodOpacity={0.5}
           />
         </filter>
       </defs>
@@ -115,7 +117,11 @@ export function StaffSyncLogo({
   href,
   className = '',
   theme = 'default',
+  customLogoUrl,
+  customName,
 }: LogoProps) {
+  const [imgError, setImgError] = useState(false);
+
   const iconSizes = {
     sm: 24,
     md: 32,
@@ -131,26 +137,51 @@ export function StaffSyncLogo({
   };
 
   const isSuper = theme === 'super-admin';
+  const hasCustomLogo = Boolean(customLogoUrl && !imgError);
 
   const content = (
     <div className={`inline-flex items-center gap-2.5 select-none ${className}`}>
-      <StaffSyncIcon
-        size={iconSizes[size]}
-        variant={theme}
-      />
+      {hasCustomLogo ? (
+        <div
+          className="rounded-lg overflow-hidden border border-subtle bg-surface flex items-center justify-center shrink-0 p-0.5 shadow-sm"
+          style={{ width: iconSizes[size], height: iconSizes[size] }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={customLogoUrl!}
+            alt={customName || 'Company Logo'}
+            onError={() => setImgError(true)}
+            className="w-full h-full object-contain rounded"
+          />
+        </div>
+      ) : (
+        <StaffSyncIcon
+          size={iconSizes[size]}
+          variant={theme}
+        />
+      )}
+
       {showText && (
         <div className="flex flex-col leading-none">
           <div className={`font-bold tracking-tight ${textSizes[size]}`}>
-            <span className={isSuper ? 'text-slate-100' : 'text-fg font-extrabold'}>Staff</span>
-            <span
-              className={
-                isSuper
-                  ? 'bg-gradient-to-r from-indigo-400 via-indigo-300 to-purple-400 bg-clip-text text-transparent ml-0.5'
-                  : 'bg-gradient-to-r from-sky-400 via-blue-500 to-indigo-500 bg-clip-text text-transparent ml-0.5'
-              }
-            >
-              Sync
-            </span>
+            {customName ? (
+              <span className={isSuper ? 'text-slate-100' : 'text-fg font-extrabold truncate max-w-[140px] sm:max-w-[180px] inline-block align-bottom'}>
+                {customName}
+              </span>
+            ) : (
+              <>
+                <span className={isSuper ? 'text-slate-100' : 'text-fg font-extrabold'}>Staff</span>
+                <span
+                  className={
+                    isSuper
+                      ? 'bg-gradient-to-r from-indigo-400 via-indigo-300 to-purple-400 bg-clip-text text-transparent ml-0.5'
+                      : 'bg-gradient-to-r from-sky-400 via-blue-500 to-indigo-500 bg-clip-text text-transparent ml-0.5'
+                  }
+                >
+                  Sync
+                </span>
+              </>
+            )}
           </div>
           {subtitle && (
             <span

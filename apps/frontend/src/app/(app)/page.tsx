@@ -3,8 +3,8 @@
 import { useAuth } from '@/lib/auth';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
-import { Users, Clock, DollarSign, Activity } from 'lucide-react';
-import { Paginated, Employee, AttendanceDay, PayrollRun } from '@/lib/types';
+import { Users, Clock, DollarSign, Building2 } from 'lucide-react';
+import { Paginated, Employee, AttendanceDay, PayrollRun, Client } from '@/lib/types';
 
 function todayISO() {
   const d = new Date();
@@ -25,12 +25,6 @@ function formatMoney(v: string | number) {
 
 export default function DashboardPage() {
   const { user } = useAuth();
-
-  const health = useQuery({
-    queryKey: ['health'],
-    queryFn: () => api.get<{ status: string; timestamp: string }>('/health'),
-    refetchInterval: 30_000,
-  });
 
   const employees = useQuery({
     queryKey: ['dashboard-employees'],
@@ -57,6 +51,14 @@ export default function DashboardPage() {
     },
   });
 
+  const clients = useQuery({
+    queryKey: ['dashboard-clients'],
+    queryFn: () =>
+      api
+        .get<{ data: Client[] }>('/api/clients')
+        .then((r) => r.data?.length ?? 0),
+  });
+
   const lastPayroll = useQuery({
     queryKey: ['dashboard-last-payroll'],
     queryFn: () =>
@@ -74,12 +76,6 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <StatCard
-          label="API Status"
-          value={health.data?.status ?? '...'}
-          ok={health.data?.status === 'ok'}
-          icon={Activity}
-        />
-        <StatCard
           label="Active Employees"
           value={employees.isLoading ? '...' : String(employees.data ?? 0)}
           icon={Users}
@@ -89,6 +85,11 @@ export default function DashboardPage() {
           value={presentToday.isLoading ? '...' : String(presentToday.data ?? 0)}
           icon={Clock}
           ok={presentToday.data ? true : undefined}
+        />
+        <StatCard
+          label="Total Clients"
+          value={clients.isLoading ? '...' : String(clients.data ?? 0)}
+          icon={Building2}
         />
         <StatCard
           label="Last Payroll"

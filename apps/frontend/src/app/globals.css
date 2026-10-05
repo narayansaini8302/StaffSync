@@ -52,20 +52,20 @@
 }
 
 .dark {
-  /* Backgrounds: Neutral dark charcoal / slate gray */
-  --bg-app:        #111216;
-  --bg-surface:    #18191f;
-  --bg-elevated:   #23242b;
-  --bg-hover:      #2b2d36;
+  /* Backgrounds: Pure Deep Black Palette */
+  --bg-app:        #000000;
+  --bg-surface:    #0c0d12;
+  --bg-elevated:   #15171f;
+  --bg-hover:      #1e202a;
 
-  /* Text: Clean neutral grays */
-  --fg-primary:    #f3f4f6;
-  --fg-secondary:  #a1a1aa;
-  --fg-muted:      #71717a;
+  /* Text: Clean high-contrast text */
+  --fg-primary:    #ffffff;
+  --fg-secondary:  #94a3b8;
+  --fg-muted:      #64748b;
 
-  /* Borders: Subtle gray borders */
-  --border-subtle: #272832;
-  --border-strong: #3b3d4a;
+  /* Borders: Refined dark borders */
+  --border-subtle: #1e2029;
+  --border-strong: #2e3240;
 
   /* Brand */
   --brand:         #3b82f6;
@@ -137,7 +137,7 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
-  transition: background-color 150ms ease, color 150ms ease;
+  transition: background-color 200ms ease, color 200ms ease, border-color 200ms ease;
 }
 
 /* ==========================================================================
