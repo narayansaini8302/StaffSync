@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useId } from 'react';
 import Link from 'next/link';
 
 interface LogoProps {
@@ -9,7 +9,6 @@ interface LogoProps {
   className?: string;
   theme?: 'default' | 'super-admin';
   customLogoUrl?: string | null;
-  customName?: string | null;
 }
 
 export function StaffSyncIcon({
@@ -22,6 +21,8 @@ export function StaffSyncIcon({
   variant?: 'default' | 'super-admin';
 }) {
   const isSuper = variant === 'super-admin';
+  const rawId = useId();
+  const id = rawId.replace(/[^a-zA-Z0-9]/g, '');
 
   return (
     <svg
@@ -33,79 +34,57 @@ export function StaffSyncIcon({
       className={`shrink-0 transition-transform duration-200 hover:scale-105 ${className}`}
     >
       <defs>
-        <linearGradient id={`bgGrad-${variant}`} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor={isSuper ? '#0F172A' : '#0B132B'} />
-          <stop offset="100%" stopColor={isSuper ? '#1E1B4B' : '#1C2541'} />
+        {/* Vibrant Brand Tile Gradient */}
+        <linearGradient id={`bg-${id}`} x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor={isSuper ? '#4338CA' : '#2563EB'} />
+          <stop offset="50%" stopColor={isSuper ? '#4F46E5' : '#1D4ED8'} />
+          <stop offset="100%" stopColor={isSuper ? '#6D28D9' : '#0284C7'} />
         </linearGradient>
 
-        <linearGradient id={`loop1-${variant}`} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor={isSuper ? '#818CF8' : '#22D3EE'} />
-          <stop offset="50%" stopColor={isSuper ? '#6366F1' : '#06B6D4'} />
-          <stop offset="100%" stopColor={isSuper ? '#4F46E5' : '#0284C7'} />
+        <linearGradient id={`accent-${id}`} x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#FFFFFF" />
+          <stop offset="100%" stopColor={isSuper ? '#DDD6FE' : '#67E8F9'} />
         </linearGradient>
-
-        <linearGradient id={`loop2-${variant}`} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor={isSuper ? '#A5B4FC' : '#38BDF8'} />
-          <stop offset="50%" stopColor={isSuper ? '#818CF8' : '#2563EB'} />
-          <stop offset="100%" stopColor={isSuper ? '#6366F1' : '#4F46E5'} />
-        </linearGradient>
-
-        <filter id={`glow-${variant}`} x="-20%" y="-20%" width="140%" height="140%">
-          <feDropShadow
-            dx="0"
-            dy="2"
-            stdDeviation="3"
-            floodColor={isSuper ? '#6366F1' : '#0284C7'}
-            floodOpacity={0.5}
-          />
-        </filter>
       </defs>
 
-      {/* Rounded squircle tile */}
+      {/* Rounded Squircle Tile */}
       <rect
         width="64"
         height="64"
         rx="16"
-        fill={`url(#bgGrad-${variant})`}
+        fill={`url(#bg-${id})`}
       />
       <rect
         width="64"
         height="64"
         rx="16"
-        stroke={isSuper ? 'rgba(129, 140, 248, 0.25)' : 'rgba(56, 189, 248, 0.25)'}
+        stroke="rgba(255, 255, 255, 0.25)"
         strokeWidth="1.5"
       />
 
-      {/* Interlocking Dual-S Ribbon Infinity Loop */}
-      <g filter={`url(#glow-${variant})`}>
-        {/* Right S curve (Sync loop) */}
-        <path
-          d="M32 32 C38 23 48 23 51 29 C54 35 48 42 42 42 C36 42 32 38 28 42 C24 46 25 50 31 51 C37 52 46 49 50 43"
-          stroke={`url(#loop2-${variant})`}
-          strokeWidth="5.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          fill="none"
-        />
+      {/* Interlocking Dynamic Dual-S Loop (Crisp White + Electric Cyan) */}
+      {/* Top / Right Loop */}
+      <path
+        d="M44 23 C44 17.5 38 15 32 15 C23 15 17 21 17 28 C17 37 32 36 32 43 C32 46.5 29 49 24 49 C19 49 16 46 16 41.5"
+        stroke="#FFFFFF"
+        strokeWidth="5.5"
+        strokeLinecap="round"
+        fill="none"
+      />
 
-        {/* Left S curve (Staff loop) */}
-        <path
-          d="M32 32 C26 41 16 41 13 35 C10 29 16 22 22 22 C28 22 32 26 36 22 C40 18 39 14 33 13 C27 12 18 15 14 21"
-          stroke={`url(#loop1-${variant})`}
-          strokeWidth="5.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          fill="none"
-        />
+      {/* Bottom / Left Loop */}
+      <path
+        d="M20 41 C20 46.5 26 49 32 49 C41 49 47 43 47 36 C47 27 32 28 32 21 C32 17.5 35 15 40 15 C45 15 48 18 48 22.5"
+        stroke={isSuper ? '#C7D2FE' : '#38BDF8'}
+        strokeWidth="5.5"
+        strokeLinecap="round"
+        fill="none"
+      />
 
-        {/* Central nexus node */}
-        <circle
-          cx="32"
-          cy="32"
-          r="2.8"
-          fill={isSuper ? '#C7D2FE' : '#38BDF8'}
-        />
-      </g>
+      {/* Dynamic Nexus Nodes */}
+      <circle cx="32" cy="32" r="3.8" fill="#FFFFFF" />
+      <circle cx="20" cy="41" r="2.8" fill={isSuper ? '#DDD6FE' : '#38BDF8'} />
+      <circle cx="44" cy="23" r="2.8" fill="#FFFFFF" />
     </svg>
   );
 }
@@ -118,7 +97,6 @@ export function StaffSyncLogo({
   className = '',
   theme = 'default',
   customLogoUrl,
-  customName,
 }: LogoProps) {
   const [imgError, setImgError] = useState(false);
 
@@ -149,7 +127,7 @@ export function StaffSyncLogo({
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={customLogoUrl!}
-            alt={customName || 'Company Logo'}
+            alt="Company Logo"
             onError={() => setImgError(true)}
             className="w-full h-full object-contain rounded"
           />
@@ -164,28 +142,20 @@ export function StaffSyncLogo({
       {showText && (
         <div className="flex flex-col leading-none">
           <div className={`font-bold tracking-tight ${textSizes[size]}`}>
-            {customName ? (
-              <span className={isSuper ? 'text-slate-100' : 'text-fg font-extrabold truncate max-w-[140px] sm:max-w-[180px] inline-block align-bottom'}>
-                {customName}
-              </span>
-            ) : (
-              <>
-                <span className={isSuper ? 'text-slate-100' : 'text-fg font-extrabold'}>Staff</span>
-                <span
-                  className={
-                    isSuper
-                      ? 'bg-gradient-to-r from-indigo-400 via-indigo-300 to-purple-400 bg-clip-text text-transparent ml-0.5'
-                      : 'bg-gradient-to-r from-sky-400 via-blue-500 to-indigo-500 bg-clip-text text-transparent ml-0.5'
-                  }
-                >
-                  Sync
-                </span>
-              </>
-            )}
+            <span className={isSuper ? 'text-slate-100 font-extrabold' : 'text-fg font-extrabold'}>Staff</span>
+            <span
+              className={
+                isSuper
+                  ? 'bg-gradient-to-r from-indigo-400 via-indigo-300 to-purple-400 bg-clip-text text-transparent ml-0.5 font-extrabold'
+                  : 'bg-gradient-to-r from-sky-400 via-blue-500 to-indigo-500 bg-clip-text text-transparent ml-0.5 font-extrabold'
+              }
+            >
+              Sync
+            </span>
           </div>
           {subtitle && (
             <span
-              className={`text-[9px] uppercase tracking-wider font-semibold mt-0.5 ${
+              className={`text-[9px] uppercase tracking-wider font-semibold mt-0.5 truncate max-w-[170px] ${
                 isSuper ? 'text-indigo-400/80' : 'text-muted'
               }`}
             >

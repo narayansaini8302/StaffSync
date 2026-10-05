@@ -91,7 +91,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           size="sm"
           href="/"
           customLogoUrl={companyLogoUrl}
-          customName={company?.name}
         />
 
         {/* Right side: Theme toggle, Profile Avatar button, Mobile Menu button */}
@@ -147,7 +146,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   size="sm"
                   href="/"
                   customLogoUrl={companyLogoUrl}
-                  customName={company?.name}
                 />
                 <button
                   onClick={() => setMobileNavOpen(false)}
@@ -233,9 +231,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <StaffSyncLogo
             size="md"
             href="/"
-            subtitle="Workforce Suite"
+            subtitle={company?.name || 'Workforce Suite'}
             customLogoUrl={companyLogoUrl}
-            customName={company?.name}
           />
         </div>
 
@@ -293,18 +290,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       {/* Main Content Area with Desktop Top Header */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Desktop Top Header Bar */}
-        <header className="hidden md:flex items-center justify-between px-6 py-3 bg-surface/80 backdrop-blur-md border-b border-subtle sticky top-0 z-30">
+        <header className="hidden md:flex items-center justify-between px-6 py-3.5 bg-surface/80 backdrop-blur-md border-b border-subtle sticky top-0 z-30">
           <div className="flex items-center gap-3">
-            <StaffSyncLogo
-              size="sm"
-              href="/"
-              customLogoUrl={companyLogoUrl}
-              customName={company?.name}
-            />
+            <div className="flex items-center gap-2 text-sm font-semibold text-fg">
+              <span className="text-muted font-normal">Workspace /</span>
+              <span className="capitalize">{pathname === '/' ? 'Dashboard' : pathname.replace('/', '').replace(/-/g, ' ')}</span>
+            </div>
+
             {company?.name && (
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-brand-soft text-brand border border-brand/20">
-                {company.name}
-              </span>
+              <div className="hidden lg:flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-brand-soft text-brand border border-brand/20 ml-2">
+                <Building2 size={13} className="shrink-0" />
+                <span className="truncate max-w-[280px]">{company.name}</span>
+              </div>
             )}
           </div>
 
@@ -314,7 +311,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             {/* Profile Avatar button */}
             <button
               onClick={() => setProfileOpen(true)}
-              className="flex items-center gap-2 py-1.5 px-3 rounded-full hover:bg-hover border border-subtle transition cursor-pointer"
+              className="flex items-center gap-2.5 py-1.5 px-3 rounded-full hover:bg-hover border border-subtle transition cursor-pointer"
             >
               <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-brand to-sky-400 p-[1px] shrink-0">
                 <div className="w-full h-full rounded-full bg-surface flex items-center justify-center text-[10px] font-bold text-fg">
